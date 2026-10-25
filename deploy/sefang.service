@@ -1,0 +1,24 @@
+[Unit]
+Description=Sefang read-only library
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sefang
+Group=sefang
+WorkingDirectory=/srv/sefang
+EnvironmentFile=/etc/sefang/sefang.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/sefang/.venv/bin/sefang serve --host 127.0.0.1 --port 18943
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=90
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

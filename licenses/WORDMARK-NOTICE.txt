@@ -1,0 +1,1 @@
+Sefang wordmark outlines are based on Caveat Brush, licensed under the SIL Open Font License 1.1. Font source: https://github.com/google/fonts/tree/main/ofl/caveatbrush . Only vector outlines are shipped; no font or network dependency is required. The full license is retained in FONT-OFL.txt.
