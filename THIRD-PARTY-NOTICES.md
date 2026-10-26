@@ -40,6 +40,8 @@ wheels are listed by the wheel's own licence files.
 | react-router | 8.4.0 | MIT | JavaScript (bundled in static/assets) |
 | @remix-run/route-pattern | 0.22.1 | MIT | JavaScript (bundled in static/assets) |
 | cookie-es | 3.1.1 | MIT | JavaScript (bundled in static/assets) |
+| media-chrome | 4.19.4 | MIT | JavaScript (bundled in static/assets) |
+| ce-la-react | 0.3.2 | BSD-3-Clause | JavaScript (bundled in static/assets) |
 
 ## annotated-doc 0.0.5 (Python)
 
@@ -3557,3 +3559,8 @@ SOFTWARE.
 ## Sefang wordmark
 
 The outlined Caveat Brush wordmark and its SIL OFL 1.1 notice are retained in `licenses/WORDMARK-NOTICE.txt` and `licenses/FONT-OFL.txt`. No runtime font is loaded.
+
+
+## Media Chrome and ce-la-react
+
+Media Chrome 4.19.4 (MIT) and ce-la-react 0.3.2 (BSD-3-Clause) are included in the frontend bundle. Their complete original notices and license texts are retained in `licenses/JAVASCRIPT-DEPENDENCIES.txt`.

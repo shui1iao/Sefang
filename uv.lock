@@ -389,8 +389,8 @@ wheels = [
 
 [[package]]
 name = "se-catalog-core"
-version = "2026.10.24.2"
-source = { path = "vendor/se_catalog_core-2026.10.24.2-py3-none-any.whl" }
+version = "2026.10.25.1"
+source = { path = "vendor/se_catalog_core-2026.10.25.1-py3-none-any.whl" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "httpx" },
@@ -399,7 +399,7 @@ dependencies = [
     { name = "pillow" },
 ]
 wheels = [
-    { filename = "se_catalog_core-2026.10.24.2-py3-none-any.whl", hash = "sha256:e28ed4c008700f482a14af3caad0d1275b09e3c83b110844b4594cbd7ce643ba" },
+    { filename = "se_catalog_core-2026.10.25.1-py3-none-any.whl", hash = "sha256:38053b764ddc84eabadc334cdf8c894cd4a3e1dae674dbb51d41d0471fb52bc7" },
 ]
 
 [package.metadata]
@@ -413,7 +413,7 @@ requires-dist = [
 
 [[package]]
 name = "sefang"
-version = "2.0.0"
+version = "2.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -441,7 +441,7 @@ requires-dist = [
     { name = "opencv-python-headless", specifier = "==4.13.0.92" },
     { name = "pillow", specifier = "==12.3.0" },
     { name = "pycryptodome", specifier = "==3.23.0" },
-    { name = "se-catalog-core", path = "vendor/se_catalog_core-2026.10.24.2-py3-none-any.whl" },
+    { name = "se-catalog-core", path = "vendor/se_catalog_core-2026.10.25.1-py3-none-any.whl" },
     { name = "telethon", specifier = "==1.45.0" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]

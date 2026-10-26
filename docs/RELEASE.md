@@ -1,26 +1,55 @@
-# Version 2.0.0 source release
+# Version 2.1.0 source release
 
-This tree contains the website, frontend sources and built assets, the same-version
-shared catalogue core source and wheel, pinned dependencies, generic deployment
-examples, and synthetic tests. It contains no channel databases, session credentials,
-media, real caption snapshots, old Git history or installation-specific identity lists.
+This tree contains the website, frontend sources and reproducible built assets,
+shared catalogue core 2026.10.25.1 source and a locally rebuilt wheel, pinned
+Python and npm dependencies, generic deployment examples, and synthetic tests.
+It contains no channel databases, session credentials, media, real caption
+snapshots, installation-specific identity lists or deployment history.
 
-Website and core code: MIT, project attribution "Sefang authors". Third-party authors
-and licenses are retained separately; see NOTICE.md and licenses/.
+Website and core code: MIT, project attribution "Sefang authors". Third-party
+authors and licenses are retained separately; see NOTICE.md and licenses/.
+Media Chrome 4.19.4 is MIT-licensed and ce-la-react 0.3.2 is BSD-3-Clause;
+their complete original notices are included with the JavaScript license texts.
+No prebuilt application executable or private registry is required.
 
-Verified with Python 3.14 and Node 24: fresh noneditable installation with the locked
-31 Python distributions; TypeScript/Vite build; 88 Python synthetic tests and 35
-frontend tests. The frontend build reproduces the included static assets byte-for-byte.
-Historical tests requiring a private database were omitted; synthetic fixtures were
-updated for the current explicit cast-source, fallback-route and amateur-placeholder
-contracts. The tests do not establish compatibility with a real Telegram account.
+## What changed
 
-No real login, channel access or media download is needed for installation tests.
-A functioning online instance requires your own authorized credentials and data.
-Public metadata and translation behavior remains unchanged; read README.md before
-starting online. No Safari-device or real-video playback validation is claimed here.
+See ../CHANGELOG.md: current standalone player controls and responsive horizontal
+volume/mute layout; mobile timeline spacing; cover-badge and actor-filter removal;
+the known 200GANA same-work prefix and the fallback Description tag boundary.
+No backend migration or dependency-version upgrade is required beyond the
+included updated shared-core wheel and the pinned frontend additions.
 
-Use `Sefang authors` for project copyright. A publisher may use GitHub's noreply
-commit identity rather than a personal email. Create a new repository history rather
-than importing a deployment tree or old commits. Review source archives, package
-metadata and notices before publishing; a source license does not license media.
+## Verification
+
+Verified with Python 3.14 and Node 24: fresh locked noneditable installation of
+31 Python distributions; an offline npm install; TypeScript/Vite build; 93 Python
+synthetic tests and 41 frontend tests. Built frontend assets reproduce exactly.
+Core tests use generated HTTP response fixtures, never captured real pages:
+GANA prefix equivalence, conflicting/unknown prefixes, authoritative printed
+numbers, and Japanese/English Description tag boundaries are covered.
+
+The clean core wheel is built from the included source with the pinned setuptools
+and SOURCE_DATE_EPOCH=0; two builds produced identical bytes. Its hash is locked
+in uv.lock. Display-name mappings and orthographic rules are unchanged; research
+quotations and local snapshots remain omitted. A new empty offline index starts
+on loopback with external socket connections forbidden and no attempted outbound
+connection. These checks do not establish a functioning Telegram session.
+
+Historical tests requiring private data are not distributed. All public tests use
+synthetic fixtures or mocked network; no login, channel access, real photographs
+or media download is needed. No real Telegram media or iPhone/Safari-device
+playback verification is claimed. A working online instance needs your own
+credentials, authorized data and appropriate access controls; see README.md.
+
+## Source distribution
+
+The release attachment is a source archive with one top-level Sefang-v2.1.0/
+directory, plus SHA256SUMS. It contains the same public source members as the
+repository, without .git, environments, caches, logs, reports or runtime state.
+Archive ownership and timestamps are normalized. Build logs, deployment records,
+review material and manifests are not part of the source distribution.
+
+Use "Sefang authors" for project attribution. A source license does not license
+media or grant rights to channel material. Review source archives, wheel contents
+and notices before redistributing.

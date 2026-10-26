@@ -31,7 +31,7 @@ MIB_PREFIXES = frozenset("""
 FILE_WORDS = frozenset({"IMG", "NO", "PART", "VID", "VIDEO"})
 # Numeric shop prefixes that are known to be the same work as the bare number.
 SAME_WORK_PREFIX = frozenset({
-    ("259", "LUXU"), ("7", "BAZX"), ("49", "HA"), ("230", "ORETD"), ("278", "GYAN"), ("336", "KBI"),
+    ("200", "GANA"), ("259", "LUXU"), ("7", "BAZX"), ("49", "HA"), ("230", "ORETD"), ("278", "GYAN"), ("336", "KBI"),
     ("345", "SIMM"), ("413", "INST"), ("428", "SUKE"), ("435", "MFC"), ("476", "MLA"), ("762", "FKOS"),
 })
 # Search spellings with a shop prefix for bare numbers (query expansion only).

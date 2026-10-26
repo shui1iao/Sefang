@@ -5,18 +5,20 @@ import pickers from './pickers.tsx?raw';
 import {readFileSync} from 'node:fs';
 const css=readFileSync(new URL('./style.css',import.meta.url),'utf8');
 describe('scoped compact UI contracts',()=>{
- it('mounts direct facets only in entity video lists, preserving clear and actors',()=>{
-  expect(main).toContain('{(kind||params.size>0)&&<div className="filters">{kind&&<><FacetStrip');
+ it('mounts own facets in category/studio lists but none in actors, preserving clear',()=>{
+  expect(main).toContain('{(kind||params.size>0)&&<div className="filters">{kind&&kind!==\'actors\'&&<>');
+  expect(main).toContain('{kind!==\'studios\'&&<FacetStrip kind="categories"');
+  expect(main).toContain('{kind!==\'categories\'&&<FacetStrip kind="studios"');
   expect(main).toContain('kind="categories"');expect(main).toContain('kind="studios"');
   expect(main).toContain('{params.size>0&&<Link className="clear" to="/">清除筛选</Link>}');
   expect(main).toContain("!kind&&!params.get('q')&&<ActorStrip");
  });
- it('defaults shared covers to details, disabling only home including missing covers',()=>{
+ it('retains cover detail helpers but hides all list and related cover details including actors',()=>{
   expect(main).toContain('function Artwork({video,showCoverDetails=true}');expect(main).toContain('function Card({video,showCoverDetails=true}');
   expect(main).toContain("{showCoverDetails&&<strong>{video.code||'未识别番号'}</strong>}<small>暂无封面</small>");
   expect(main).toContain('{showCoverDetails&&<span className="duration"');expect(main).toContain('{showCoverDetails&&video.code&&<span className="code-badge"');
-  expect(main).toContain('data.data.items.map(v=><Card key={v.id} video={v} showCoverDetails={!!kind}/>)');
-  expect(main).toContain('related.data?.items.map(v=><Card key={v.id} video={v}/>)');expect(main).toContain('{displayTitle(video)}</h3>');
+  expect(main).toContain('data.data.items.map(v=><Card key={v.id} video={v} showCoverDetails={false}/>)');
+  expect(main).toContain('related.data?.items.map(v=><Card key={v.id} video={v} showCoverDetails={false}/>)');expect(main).toContain('{displayTitle(video)}</h3>');
  });
  it('uses the same existing nonmodal anchored RadioGroup at all widths',()=>{
   for(const unused of ['Dialog','ResponsiveLayer','MobileSort','compact','matchMedia'])expect(pickers).not.toContain(unused);

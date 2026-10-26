@@ -1,8 +1,30 @@
 # Sefang
 
-Sefang **2.0.0** is a self-hosted, read-only video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, actor/category/issuer directories and native video controls; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. There is no web login, administration panel, upload or message-edit endpoint. The current UI has no footer and omits raw-message descriptions; original files and messages are not deleted.
+Sefang **2.1.0** is a self-hosted, read-only video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, actor/category/issuer directories and standalone controls around a single native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. There is no web login, administration panel, upload or message-edit endpoint. The current UI has no footer and omits raw-message descriptions; original files and messages are not deleted.
 
 **Do not expose private channel material to the public.** The web interface is anonymous and has no access-control layer. Bind to loopback; if remote access is needed, configure your own TLS reverse proxy and appropriate access control. Telegram access authorization alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no videos, photographs, channel data or credentials.
+
+## Changes in 2.1.0
+
+- Standalone player controls with a single-row timeline, complete time labels,
+  seven playback speeds, keyboard support and wrapper fullscreen. Manual 30-second
+  and 5-minute jumps stay within the current segment; fullscreen keeps the
+  timeline and restores the outside jump buttons on exit.
+- Desktop volume uses an inline horizontal slider and a direct mute button.
+  Phones, including touch-device landscape and wrapper fullscreen, show only
+  the mute/unmute button. The current UI has **no volume popup**.
+- Improved control contrast and mobile timeline-endpoint spacing. Cover duration
+  and number badges are hidden across home, entity and related-video cards;
+  titles retain their numbers. Actor pages do not mount category or issuer filters;
+  category and issuer pages retain their own respective filters. Existing filter
+  URLs, sorting, pagination and return navigation are unchanged.
+- Shared core **2026.10.25.1** recognizes the known `200GANA` shop prefix as the
+  same work as `GANA`, while unknown prefixes and conflicting printed numbers
+  still fail closed. `Description:` now ends fallback tag fields rather than
+  leaking synopsis text into genres.
+
+See [CHANGELOG.md](CHANGELOG.md) for the release summary and
+[docs/RELEASE.md](docs/RELEASE.md) for verification boundaries.
 
 ## Requirements
 
@@ -22,18 +44,18 @@ npm --prefix frontend run build
 
 `frontend` builds into `src/sefang/static`. **After rebuilding the frontend, run `uv sync --reinstall-package sefang --locked --no-dev --no-editable`** so the installed package contains the rebuilt assets. Built assets are included for convenience and correspond to the included frontend source. Do not run the service from an editable development install for a release.
 
-Dependencies are pinned in `uv.lock` and `frontend/package-lock.json`. No global package modifications are required. A warm local dependency cache permits the same commands with `uv --offline` / `npm --offline`; a new machine normally needs public package-registry access. The small included `vendor/se_catalog_core-2026.10.24.2-py3-none-any.whl` is built from the accompanying `core/` source, not downloaded from a private registry.
+Dependencies are pinned in `uv.lock` and `frontend/package-lock.json`. No global package modifications are required. A warm local dependency cache permits the same commands with `uv --offline` / `npm --offline`; a new machine normally needs public package-registry access. The small included `vendor/se_catalog_core-2026.10.25.1-py3-none-any.whl` is built from the accompanying `core/` source, not downloaded from a private registry.
 
 ### Rebuild the shared core
 
 ```sh
-uv build --wheel --offline --out-dir vendor core
+SOURCE_DATE_EPOCH=0 uv build --wheel --offline --out-dir vendor core
 python3 scripts/update_core_hash.py
 uv lock --offline
 uv sync --locked --no-dev --no-editable --reinstall-package se-catalog-core
 ```
 
-Omit `--offline` on the first build if the pinned setuptools build dependency is not cached. The core version remains **2026.10.24.2**. Its code, orthographic rules and factual display-name mappings are included. `core/NOTICE.md` describes attribution and the omission of research-page quotations; factual names do not create identity aliases. `data/build.json` identifies the distributed name data; its source hash is SHA256 over sorted relative `se_catalog/*.py` paths, NUL, file bytes, NUL. A rebuilt wheel can have different ZIP timestamps; inspect its contents and RECORD rather than expecting an identical binary hash.
+Omit `--offline` on the first build if the pinned setuptools build dependency is not cached. The core version remains **2026.10.25.1**. Its code, orthographic rules and factual display-name mappings are included. `core/NOTICE.md` describes attribution and the omission of research-page quotations; factual names do not create identity aliases. `data/build.json` identifies the distributed name data; its source hash is SHA256 over sorted relative `se_catalog/*.py` paths, NUL, file bytes, NUL. The bundled wheel is rebuilt from this cleaned source with `SOURCE_DATE_EPOCH=0`; the pinned build tools reproduce it byte-for-byte under that setting. Rebuild without that setting and ZIP timestamps can differ; always inspect its contents and RECORD before updating the locked hash.
 
 ## Runtime configuration
 

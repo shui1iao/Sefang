@@ -159,7 +159,7 @@ def missav(code, web):
 
 _TAG_END = (r'出演者|出演|女優タイプ|女优タイプ|タグ|東京恋人|品番|配信開始日|配信日|'
             r'再生時間|再生时间|発売日|販売日|贩売日|销售日|収録時間|収录时间|收录时间|'
-            r'監督|监督|メーカー|レーベル|Release date|Duration|Director|Maker|Label|Genre|Actress|Performer|Starring|Studio')
+            r'監督|监督|メーカー|レーベル|Release date|Duration|Director|Maker|Label|Genre|Actress|Performer|Starring|Studio|Description')
 
 
 def tag_tokens(description):

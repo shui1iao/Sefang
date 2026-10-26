@@ -1,6 +1,6 @@
 import {SEEK_STEP,VOLUME_STEP} from './segments';
 
-export type KeyTarget='editable'|'slider'|'activatable'|'media'|'page';
+export type KeyTarget='editable'|'slider'|'activatable'|'menu'|'media'|'page';
 export type PlayerAction={kind:'toggle'}|{kind:'seek';delta:number}|{kind:'volume';delta:number}|{kind:'mute'}|{kind:'fullscreen'}|{kind:'consume'};
 export type KeyLike={key:string;code?:string;repeat?:boolean;ctrlKey?:boolean;metaKey?:boolean;altKey?:boolean;isComposing?:boolean;keyCode?:number;defaultPrevented?:boolean};
 
@@ -11,7 +11,8 @@ const ACTIVATABLE='button,a[href],summary,input,[role=button],[role=link],[role=
 export function targetKind(target:EventTarget|null):KeyTarget{
  if(typeof Element==='undefined'||!(target instanceof Element))return 'page';
  if(target.closest(EDITABLE))return 'editable';
- if(target.closest('input[type=range],[role=slider]'))return 'slider';
+ if(target.closest('[role=menu],[role=menuitemradio],[role=menuitemcheckbox]'))return 'menu';
+ if(target.closest('input[type=range],[role=slider],media-time-range'))return 'slider';
  if(typeof HTMLMediaElement!=='undefined'&&target instanceof HTMLMediaElement)return 'media';
  if(target.closest(ACTIVATABLE))return 'activatable';
  return 'page';
@@ -19,7 +20,7 @@ export function targetKind(target:EventTarget|null):KeyTarget{
 
 /** 纯决策：Space/K播放暂停、←/→ ±5秒、↑/↓音量、M静音、F全屏；返回null表示交还浏览器默认行为。 */
 export function keyAction(event:KeyLike,target:KeyTarget):PlayerAction|null{
- if(event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey||target==='editable')return null;
+ if(event.defaultPrevented||event.isComposing||event.keyCode===229||event.ctrlKey||event.metaKey||event.altKey||target==='editable'||target==='menu')return null;
  const key=event.key,code=event.code||'',lower=key.length===1?key.toLowerCase():key;
  const letter=(c:string)=>lower===c||code==='Key'+c.toUpperCase();
  const space=key===' '||key==='Spacebar';

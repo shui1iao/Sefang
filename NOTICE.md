@@ -10,3 +10,6 @@ THIRD-PARTY-NOTICES.md, core/THIRD-PARTY-NOTICES.md and core/OPENCC-LICENSE.
 The wordmark vector outlines retain the font notice and SIL OFL in licenses/.
 A source-code license does not grant rights to videos, photographs, catalogue pages,
 Telegram messages, performer likenesses or trademarks.
+
+The frontend also includes Media Chrome 4.19.4 (MIT) and ce-la-react 0.3.2
+(BSD-3-Clause); full original notices are in licenses/JAVASCRIPT-DEPENDENCIES.txt.
