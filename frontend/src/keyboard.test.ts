@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {keyAction} from './keyboard';
-import {cardDuration,clampSeek,clampVolume,formatDuration,nextSegment,partIndex,segmentSummary,type Group} from './segments';
+import {clampSeek,clampVolume,formatDuration,nextSegment,partIndex,segmentSummary,type Group} from './segments';
 
 const part=(n:number,duration:number|null,available=true)=>({number:n,label_number:n,channel_id:1,message_id:10+n,duration,available,stream:`/api/videos/1/${10+n}/stream`,message_url:''});
 const group:Group={id:'g1',status:'confirmed',part_count:3,index:0,total_duration:11292.947,duration_complete:true,parts:[part(1,3600),part(2,3600.5),part(3,4092.447)]};
@@ -29,9 +29,7 @@ describe('segment playback helpers',()=>{
  it('summarises current part and complete or partial totals',()=>{
   expect(segmentSummary(group,1)).toBe('第2/3段 · 本段1:00:01 · 全片合计3:08:13');
   expect(segmentSummary({...group,duration_complete:false,total_duration:7692.447},0)).toBe('第1/3段 · 本段1:00:00 · 已知合计2:08:12 · 部分段未取得');
-  expect(cardDuration({duration:6927.193,part_count:2,duration_complete:true})).toBe('2段 · 1:55:27');
-  expect(cardDuration({duration:100,part_count:3,duration_complete:false})).toBe('3段 · 已知 1:40');
-  expect(cardDuration({duration:59.6})).toBe('1:00');expect(formatDuration(null)).toBe('时长未知');
+  expect(formatDuration(59.6)).toBe('1:00');expect(formatDuration(null)).toBe('时长未知');
   expect(partIndex(group,'1','12')).toBe(1);expect(partIndex(group,'1','99')).toBe(-1);
  });
  it('continues only to an available next part and stops at the last',()=>{

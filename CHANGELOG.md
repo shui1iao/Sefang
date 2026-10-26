@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.2.0 — 2026-10-26
+
+### Browsing and reuse
+
+- Refine the dark/coral UI across desktop and mobile, with consistent content
+  widths, readable secondary text and no header divider or parent-title breadcrumbs.
+- Keep list/directory content mounted while route loaders prepare the next page;
+  retain cancellation, retries, filter state, pagination and exact return navigation.
+- Reuse pure artwork, video grids, paging, message/loading components and request
+  helpers; remove dead cover-badge branches, duplicated computations/styles and
+  unused direct dialog/popover dependencies.
+
+### Player and sorting
+
+- Hide wrapper-fullscreen controls after one second of inactivity while playing.
+  Pointer/keyboard input reveals them; pause, loading, menus, drag/hover and keyboard
+  focus protect controls from hiding. Ordinary playback controls remain visible.
+- Use consistent standard bold time/control text in fullscreen and ordinary mode;
+  keep single-video playback, segment-safe seeking, mute/volume and seven rates.
+- Offer joined time, duration and release date with ascending/descending direction.
+  Use the same group join-time key in both directions; keep unknown values last and
+  deterministic ties. Name sorting is removed from the menu, URL model and API.
+- Preserve current filters when sorting; reset page on changed field/direction and
+  keep sort/page when returning from a video. No schema or metadata changes.
+
+### Release integrity
+
+- Keep the clean shared-core 2026.10.25.1 source and wheel unchanged, along with the
+  existing MIT/OFL/BSD and other third-party notices and remaining dependency pins.
+- Public tests use synthetic data and mocked responses. No real Telegram media or
+  iPhone/Safari-device verification is claimed; native system fullscreen can differ.
+
 ## 2.1.0 — 2026-10-26
 
 ### Player and browsing

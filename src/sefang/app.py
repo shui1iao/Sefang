@@ -12,6 +12,7 @@ from starlette.staticfiles import StaticFiles
 
 from .avatars import Portraits
 from .config import Config
+from .grouping import SORT_MODES
 from .repository import PUBLIC_KINDS, Repository
 from .streaming import router as stream_router
 from .tg.link import TgLink
@@ -105,7 +106,7 @@ def create_app(config: Config, link_factory=TgLink):
     @app.get("/api/videos")
     def videos(q: str = Query("", max_length=300), actor: str = Query("", max_length=24), studio: str = Query("", max_length=24),
                category: str = Query("", max_length=24),
-               sort: str = Query("newest", pattern="^(newest|oldest|release|name|duration)$"),
+               sort: str = Query("newest", pattern="^("+"|".join(SORT_MODES)+")$"),
                page: int = Query(1, ge=1, le=100000), limit: int = Query(36, ge=1, le=60)):
         return repo.videos(q=q, actor=actor, studio=studio, category=category, sort=sort, page=page, limit=limit)
 

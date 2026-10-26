@@ -1,3 +1,4 @@
+import {SORT_VALUES} from './sort-model';
 export const KINDS=['actors','studios','categories'] as const;
 export type Kind=typeof KINDS[number];
 export const labels:Record<Kind,string>={actors:'演员',studios:'发行商',categories:'分类'};
@@ -9,7 +10,7 @@ export function normalizeQuery(search:string):URLSearchParams {
  const input=new URLSearchParams(search),out=new URLSearchParams();
  for(const name of ['actor','studio','category']) {const value=input.get(name)||'';if(/^[0-9a-f]{24}$/.test(value))out.set(name,value)}
  const q=(input.get('q')||'').slice(0,300);if(q)out.set('q',q);
- const sort=input.get('sort');if(sort&&['oldest','release','name','duration'].includes(sort))out.set('sort',sort);
+ const sort=input.get('sort');if(sort&&sort!=='newest'&&SORT_VALUES.some(value=>value===sort))out.set('sort',sort);
  const page=input.get('page')||'';if(/^\d{1,6}$/.test(page)&&Number(page)>1)out.set('page',String(Math.min(100000,Number(page))));
  return out;
 }

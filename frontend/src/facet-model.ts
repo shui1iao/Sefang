@@ -1,7 +1,6 @@
 import type {Named} from './display';
 export type FacetEntity=Named&{id:string;count:number;aliases?:string[]};
 export type FacetOrder='count'|'name';
-export const SORT_OPTIONS=[['newest','最近加入'],['oldest','最早加入'],['release','发行日期'],['name','名称'],['duration','时长']] as const;
 const folded=(text:string)=>text.normalize('NFKC').toLocaleLowerCase().trim();
 export function facetItems<T extends FacetEntity>(items:T[],query:string,order:FacetOrder):T[]{
  const q=folded(query);

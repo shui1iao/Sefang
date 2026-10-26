@@ -1,4 +1,4 @@
-# Version 2.1.0 source release
+# Version 2.2.0 source release
 
 This tree contains the website, frontend sources and reproducible built assets,
 shared catalogue core 2026.10.25.1 source and a locally rebuilt wheel, pinned
@@ -14,17 +14,17 @@ No prebuilt application executable or private registry is required.
 
 ## What changed
 
-See ../CHANGELOG.md: current standalone player controls and responsive horizontal
-volume/mute layout; mobile timeline spacing; cover-badge and actor-filter removal;
-the known 200GANA same-work prefix and the fallback Description tag boundary.
-No backend migration or dependency-version upgrade is required beyond the
-included updated shared-core wheel and the pinned frontend additions.
+See ../CHANGELOG.md: unified responsive UI and page titles, stable data-ready
+navigation, reusable pure-artwork cards, one-second fullscreen-only control
+hiding with interaction/accessibility guards, and three video sort fields with
+both directions. The existing clean shared core and all remaining dependency
+versions are retained. No database migration is required.
 
 ## Verification
 
 Verified with Python 3.14 and Node 24: fresh locked noneditable installation of
-31 Python distributions; an offline npm install; TypeScript/Vite build; 93 Python
-synthetic tests and 41 frontend tests. Built frontend assets reproduce exactly.
+31 Python distributions; an offline npm install; TypeScript/Vite build; 96 Python
+synthetic tests and 50 frontend tests. Built frontend assets reproduce exactly.
 Core tests use generated HTTP response fixtures, never captured real pages:
 GANA prefix equivalence, conflicting/unknown prefixes, authoritative printed
 numbers, and Japanese/English Description tag boundaries are covered.
@@ -44,7 +44,7 @@ credentials, authorized data and appropriate access controls; see README.md.
 
 ## Source distribution
 
-The release attachment is a source archive with one top-level Sefang-v2.1.0/
+The release attachment is a source archive with one top-level Sefang-v2.2.0/
 directory, plus SHA256SUMS. It contains the same public source members as the
 repository, without .git, environments, caches, logs, reports or runtime state.
 Archive ownership and timestamps are normalized. Build logs, deployment records,

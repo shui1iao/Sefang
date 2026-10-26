@@ -141,8 +141,7 @@ def build_bucket(key,rows):
  return tuple(make(f"{r['channel_id']}:{r['message_id']}",status,evidence,(r,),(None,)) for r in rows)
 
 def _date(row):return str(row.get('date') or '')
-def _meta_title(row,fields):
- value=fields.get('title');return str(value) if value is not None else str(row.get('title') or '')
+SORT_MODES=('newest','oldest','duration','duration_asc','release','release_asc')
 
 class Snapshot:
  """不可变代次：所有公共读取在同一代次上计数/分页/排序，避免页面间漂移。"""
@@ -155,17 +154,16 @@ class Snapshot:
    if sort not in self._orders:self._orders[sort]=tuple(self._sort(sort))
    return self._orders[sort]
  def _sort(self,sort):
-  items=list(self.groups)
-  newest=lambda g:(max(_date(r) for r in g.parts),max(r['message_id'] for r in g.parts))
-  if sort=='oldest':return sorted(items,key=lambda g:(min(_date(r) for r in g.parts),min(r['message_id'] for r in g.parts)))
-  if sort=='duration':return sorted(items,key=lambda g:(g.total_duration or 0.0,max(r['message_id'] for r in g.parts)),reverse=True)
-  if sort=='name':return sorted(items,key=lambda g:(_meta_title(g.representative,self.fields(g)),g.representative['message_id']))
-  if sort=='release':
-   items.sort(key=lambda g:max(r['message_id'] for r in g.parts),reverse=True)
-   items.sort(key=lambda g:str(self.fields(g).get('release_date') or ''),reverse=True)
-   items.sort(key=lambda g:self.fields(g).get('release_date') is None)
-   return items
-  return sorted(items,key=newest,reverse=True)
+  ascending=sort in ('oldest','duration_asc','release_asc')
+  if sort in ('duration','duration_asc'):value=lambda g:g.total_duration
+  elif sort in ('release','release_asc'):value=lambda g:str(self.fields(g).get('release_date') or '') or None
+  else:value=lambda g:max(_date(r) for r in g.parts) or None
+  # One field in either direction, including grouped works; unknown values always last.
+  keyed=[(g,value(g)) for g in self.groups]
+  tie=lambda g:(max(r['message_id'] for r in g.parts),g.id)
+  known=sorted(((g,v) for g,v in keyed if v is not None),key=lambda item:(item[1],tie(item[0])),reverse=not ascending)
+  unknown=sorted((g for g,v in keyed if v is None),key=tie,reverse=True)
+  return [g for g,_ in known]+unknown
 
 class GroupIndex:
  """内存投影；每次只重算行内容变化所涉及的identity/消息桶，其余桶原样复用。"""

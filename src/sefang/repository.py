@@ -12,7 +12,7 @@ from .caption_tags import Roles
 from .actor_aliases import ActorAliases
 from .category_rules import CategoryRules
 from . import codes
-from .catalog.found import Found,is_same_work
+from .catalog.found import Found
 from se_catalog.catalog.stored import is_same_stored_source
 
 # Keep internal metadata/entity synchronization intact; public filtering excludes series.

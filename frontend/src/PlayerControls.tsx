@@ -3,6 +3,7 @@ import * as Menu from '@radix-ui/react-dropdown-menu';
 // A standalone UI element only: importing the controller/React barrel creates probe media.
 import 'media-chrome/media-time-range.js';
 import {PLAYBACK_RATES,MINUTE_JUMPS,playerTime} from './player-controls';
+import {useFullscreenControls} from './useFullscreenControls';
 
 export type PlaybackState={time:number;duration:number;ready:boolean;paused:boolean;ended:boolean;loading:boolean;volume:number;muted:boolean;buffered:number[][]};
 export const emptyPlayback:PlaybackState={time:0,duration:NaN,ready:false,paused:true,ended:false,loading:false,volume:1,muted:false,buffered:[]};
@@ -19,9 +20,11 @@ function Icon({name}:{name:'play'|'pause'|'muted'|'volume'|'settings'|'fullscree
 }
 export function PlayerControls({state,rate,available,fullscreen,area,onToggle,onSeek,onVolume,onMute,onRate,onFullscreen,onMenuOpen}:{state:PlaybackState;rate:number;available:boolean;fullscreen:boolean;area:RefObject<HTMLDivElement|null>;onToggle:()=>void;onSeek:(seconds:number)=>void;onVolume:(volume:number)=>void;onMute:()=>void;onRate:(rate:number)=>void;onFullscreen:()=>void;onMenuOpen:(open:boolean)=>void}){
  const [open,setOpen]=useState(false);
+ const controls=useRef<HTMLDivElement>(null);
+ const hidden=useFullscreenControls({area,controls,fullscreen,canHide:available&&state.ready&&!state.paused&&!state.ended&&!state.loading&&!open});
  function menu(next:boolean){setOpen(next);onMenuOpen(next)}
  useEffect(()=>()=>onMenuOpen(false),[onMenuOpen]);
- return <div className="player-controls" data-player-controls="">
+ return <div ref={controls} className="player-controls" data-player-controls="" data-controls-hidden={hidden?'true':undefined} aria-hidden={hidden||undefined} inert={hidden}>
    <div className="player-toolbar" role="group" aria-label="播放控制">
     <button type="button" className="player-control" aria-label={state.paused?'播放':'暂停'} title={state.paused?'播放 (Space / K)':'暂停 (Space / K)'} disabled={!available} onClick={onToggle}><Icon name={state.paused?'play':'pause'}/></button>
     <span className="player-time" data-player-time="">{playerTime(state.time)} <span>/</span> {playerTime(state.duration)}</span>

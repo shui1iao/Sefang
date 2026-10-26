@@ -138,6 +138,7 @@ class NormalCover(unittest.IsolatedAsyncioTestCase):
   self.owner.index.mark_gone(123,1);self.assertEqual(self.owner.index.photo_candidates('ABP-1',[123])[0]['video_id'],2)
   self.owner.on_change=self.filler.poke;self.filler.poke();await self.wait(lambda:self.filler.shelf.has('ABP-1'))
   before=(self.cfg.covers/cover_name('ABP-1')).read_bytes();reads=len(self.owner.link.photos)
+  await self.wait(lambda:self.work()['state'] not in ('pending','processing')) # cover installation precedes completion of its fake work job
   self.outcome=Outcome(state='partial',cover_state='not_found') # chooser rejected all candidate hosts
   with self.owner.index.session() as db:db.execute("UPDATE tg_work SET state='pending',attempts=0 WHERE identity='ABP-1'")
   self.filler.poke();await self.wait(lambda:self.work()['state']=='partial')

@@ -6,11 +6,6 @@ export function formatDuration(seconds:number|null|undefined){
  if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<0)return '时长未知';
  const total=Math.round(seconds);return total>=3600?`${Math.floor(total/3600)}:${String(Math.floor(total/60)%60).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`:`${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`;
 }
-/** 卡片角标：多段显示“N段 · 合计”，未取得全部段时明确“已知”，不把缺段当完整。 */
-export function cardDuration(video:{duration:number|null;part_count?:number;duration_complete?:boolean}){
- const count=video.part_count||1;if(count<=1)return formatDuration(video.duration);
- return `${count}段 · ${video.duration_complete===false?'已知 ':''}${formatDuration(video.duration)}`;
-}
 export function segmentSummary(group:Group,index:number){
  const part=group.parts[index];
  return `第${index+1}/${group.parts.length}段 · 本段${formatDuration(part?.duration)} · ${group.duration_complete?'全片合计':'已知合计'}${formatDuration(group.total_duration)}${group.duration_complete?'':' · 部分段未取得'}`;

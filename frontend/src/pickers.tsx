@@ -3,7 +3,8 @@ import * as Menu from '@radix-ui/react-dropdown-menu';
 import {Link} from 'react-router';
 import {labels,type Kind} from './navigation';
 import {displayName,nameHint} from './display';
-import {facetItems,SORT_OPTIONS,type FacetEntity} from './facet-model';
+import {facetItems,type FacetEntity} from './facet-model';
+import {SORT_FIELDS,decodeSort,encodeSort,type SortField,type SortDirection} from './sort-model';
 
 type EntityPage={items:FacetEntity[];total:number;page:number;pages:number};
 async function readJson<T>(url:string,signal:AbortSignal):Promise<T>{
@@ -83,12 +84,20 @@ function LinkToDirectory({kind}:{kind:Kind}){return <Link to={'/'+kind}>{labels[
 export function SortPicker({value,onChange}:{value:string;onChange:(value:string)=>void}){
  const [open,setOpen]=useState(false);
  const triggerRef=useRef<HTMLButtonElement>(null);
- const name=SORT_OPTIONS.find(e=>e[0]===value)?.[1]??SORT_OPTIONS[0][1];
- const trigger=<button type="button" ref={triggerRef} className="picker-trigger sort-trigger" aria-label="排序"><span className="picker-value">{name}</span><Chevron/></button>;
- function choose(next:string){onChange(next);setOpen(false)}
- return <div className="sort picker-sort"><span>排序</span>{<Menu.Root open={open} onOpenChange={setOpen} modal={false}>
-  <Menu.Trigger asChild>{trigger}</Menu.Trigger><Menu.Portal><Menu.Content className="picker-layer picker-menu" data-picker-layer="menu" sideOffset={8} collisionPadding={12} avoidCollisions loop onCloseAutoFocus={event=>restoreTrigger(event,triggerRef)}>
-   <Menu.Label className="picker-menu-label">排序方式</Menu.Label><Menu.RadioGroup value={value} onValueChange={choose}>{SORT_OPTIONS.map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key}><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
+ const [selection,setSelection]=useState(()=>decodeSort(value));
+ useEffect(()=>setSelection(decodeSort(value)),[value]);
+ const {field,direction}=selection;
+ const name=SORT_FIELDS.find(([key])=>key===field)![1];
+ const directionName=direction==='asc'?'升序':'降序';
+ function choose(nextField:SortField,nextDirection:SortDirection){setSelection({field:nextField,direction:nextDirection});onChange(encodeSort(nextField,nextDirection))}
+ return <div className="sort picker-sort"><span>排序</span><Menu.Root open={open} onOpenChange={setOpen} modal={false}>
+  <Menu.Trigger asChild><button type="button" ref={triggerRef} className="picker-trigger sort-trigger" aria-label="排序" title={`${name} · ${directionName}`}><span className="picker-value">{name}</span><svg className="sort-direction" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={direction==='asc'?'M8 13V3m-4 4 4-4 4 4':'M8 3v10m-4-4 4 4 4-4'}/></svg><Chevron/></button></Menu.Trigger>
+  <Menu.Portal><Menu.Content className="picker-layer picker-menu" data-picker-layer="menu" sideOffset={8} collisionPadding={12} avoidCollisions loop onCloseAutoFocus={event=>restoreTrigger(event,triggerRef)}>
+   <Menu.Label className="picker-menu-label">排序字段</Menu.Label>
+   <Menu.RadioGroup value={field} onValueChange={next=>choose(next as SortField,direction)} aria-label="排序字段">{SORT_FIELDS.map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key} onSelect={event=>event.preventDefault()}><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
+   <Menu.Separator className="sort-separator"/>
+   <Menu.Label className="picker-menu-label">排序方向</Menu.Label>
+   <Menu.RadioGroup value={direction} onValueChange={next=>{choose(field,next as SortDirection);setOpen(false)}} aria-label="排序方向">{([['asc','升序'],['desc','降序']] as const).map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key}><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
   </Menu.Content></Menu.Portal>
- </Menu.Root>}</div>;
+ </Menu.Root></div>;
 }

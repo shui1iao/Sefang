@@ -1,0 +1,514 @@
+/* Isolated playback presentation. Transport and control layout are unchanged. */
+.player-area {
+  width: 100%;
+  background: #08090b;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.player-area video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  max-height: 76vh;
+  min-height: 180px;
+  background: #08090b;
+  object-fit: contain;
+}
+.player-area .message {
+  border-radius: 0;
+}
+.player-skeleton {
+  aspect-ratio: 16/9;
+}
+@media (max-width: 760px) {
+  .player-area {
+    border-radius: 8px;
+  }
+  .player-area video {
+    min-height: 0;
+    max-height: 65vh;
+  }
+}
+.player-area {
+  position: relative;
+}
+.player-area:fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 0;
+}
+.player-area:fullscreen video {
+  flex: 1;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
+.player-toast {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  background: #000c;
+  color: #fff;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.player-resume {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  background: #0009;
+}
+.player-resume button {
+  background: var(--accent);
+  border: 0;
+  color: #17171d;
+  font-weight: 750;
+  padding: 12px 20px;
+}
+.player-notice {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--panel);
+}
+.segment-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+.segment-summary {
+  margin: 0;
+  font-size: 14px;
+  color: #c7cad4;
+}
+.segment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.segment {
+  font-size: 13px;
+  padding: 7px 11px;
+}
+.segment.current {
+  border-color: var(--accent);
+  color: #fff;
+  background: #2b2d36;
+}
+.segment:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (max-width: 760px) {
+  .segment-bar {
+    gap: 8px;
+  }
+  .segment-summary {
+    width: 100%;
+    font-size: 13px;
+  }
+  .segment {
+    font-size: 12px;
+    padding: 6px 9px;
+  }
+  .player-toast {
+    font-size: 13px;
+  }
+}
+/* Player enhancement only: no global focus reset or transport/layout change. */
+.player-area:focus,
+.player-area [data-main-video]:focus {
+  outline: 0;
+  box-shadow: none;
+}
+.player-area:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  background: #08090b;
+  max-width: none;
+  padding: 0;
+  border: 0;
+}
+.player-area:fullscreen [data-main-video] {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  object-fit: contain;
+}
+/* Anchor overlays to the video, not to an error/notice footer below it. */
+.player-surface {
+  position: relative;
+  min-width: 0;
+}
+.player-area:fullscreen > .player-surface {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.player-area:fullscreen .player-surface > [data-main-video] {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  object-fit: contain;
+}
+
+.player-area [data-main-video]:fullscreen {
+  background: #08090b;
+  object-fit: contain;
+  outline: 0;
+  box-shadow: none;
+}
+/* Only the center button is interactive; no full-surface click layer. */
+.player-center-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #111216;
+  box-shadow: 0 6px 24px #0006;
+  cursor: pointer;
+}
+.player-center-play:hover,
+.player-center-play:focus-visible {
+  background: var(--accent);
+}
+.player-center-play:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.player-center-play > svg {
+  width: 36px;
+  height: 36px;
+  margin-left: 4px;
+}
+@media (max-width: 760px) {
+  .player-center-play {
+    width: 64px;
+    height: 64px;
+  }
+  .player-center-play > svg {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Standalone Media Chrome time range; fullscreen-only idle visibility is UI-owned. */
+.player-controls {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  isolation: isolate;
+  padding: 6px 12px 10px;
+  background: transparent;
+  color: #fff;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 1px #000;
+}
+/* Soft local surround only; never a full-surface event layer. */
+.player-controls::before {
+  content: "";
+  position: absolute;
+  inset: -32px -6px -2px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.56),
+    rgba(0, 0, 0, 0.28) 52%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 4%,
+    #000 96%,
+    transparent
+  );
+}
+.player-controls svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 1px 1px #000);
+}
+.player-timeline {
+  display: inline-flex;
+  flex: 1 1 0%;
+  min-width: 60px;
+  width: auto;
+  filter: drop-shadow(0 1px 1px #000b);
+  --media-control-background: transparent;
+  --media-control-hover-background: transparent;
+  --media-secondary-color: transparent;
+  --media-control-height: 24px;
+  --media-range-padding: 7px;
+  --media-range-padding-left: 10px;
+  --media-range-padding-right: 10px;
+  --media-range-track-height: 5px;
+  --media-range-track-border-radius: 4px;
+  --media-range-track-background: #ffffff38;
+  --media-range-bar-color: #fff;
+  --media-range-thumb-background: #fff;
+  --media-range-thumb-width: 14px;
+  --media-range-thumb-height: 14px;
+  --media-time-range-buffered-color: #ffffff80;
+  --media-preview-box-display: none;
+  --media-current-box-display: none;
+  --media-focus-box-shadow: inset 0 0 0 2px #ff6b79;
+}
+.player-timeline[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.player-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 42px;
+}
+.player-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+}
+.player-control:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.player-control:focus-visible,
+.player-volume input:focus-visible,
+.player-jumps button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.player-time {
+  flex: none;
+  white-space: nowrap;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.player-time > span {
+  padding-inline: 3px;
+}
+.player-volume {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.player-volume input {
+  width: 88px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+  .player-volume {
+    gap: 0;
+  }
+  .player-volume input {
+    display: none;
+  }
+}
+.player-settings-trigger {
+  width: auto;
+  min-width: 40px;
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.player-settings-menu {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.player-settings-menu .picker-option {
+  min-height: 34px;
+}
+.player-controls
+  .player-control:is(:hover, :focus-visible, :active, [data-state="open"]):not(
+    :disabled
+  ),
+.player-settings-menu
+  .picker-option:is(
+    :hover,
+    :focus,
+    :focus-visible,
+    [data-highlighted],
+    [data-state="checked"]
+  ),
+.player-jumps button:is(:hover, :focus-visible, :active):not(:disabled) {
+  background: #ff6b79;
+  color: #111216;
+  text-shadow: none;
+}
+.player-controls
+  .player-control:is(:hover, :focus-visible, :active, [data-state="open"]):not(
+    :disabled
+  )
+  svg {
+  filter: none;
+}
+.player-settings-menu .picker-check-slot {
+  color: inherit;
+}
+.player-jumps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 12px 12px;
+  background: #111216;
+}
+.player-jumps button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 8px 4px;
+  white-space: nowrap;
+  background: #1b1d23;
+}
+.player-jumps button > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.player-jumps button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.player-area:fullscreen > .player-surface {
+  justify-content: center;
+}
+@media (max-width: 760px) {
+  .player-controls {
+    padding: 4px 6px 6px;
+  }
+  .player-controls::before {
+    top: -14px;
+  }
+  .player-toolbar {
+    gap: 2px;
+    min-height: 40px;
+  }
+  .player-controls svg {
+    width: 22px;
+    height: 22px;
+  }
+  .player-control {
+    width: 32px;
+    height: 40px;
+    padding: 4px;
+  }
+  .player-time {
+    font-size: 13px;
+  }
+  .player-time > span {
+    padding-inline: 1px;
+  }
+  .player-settings-trigger {
+    width: auto;
+    min-width: 32px;
+    gap: 0;
+    font-size: 13px;
+  }
+  .player-jumps {
+    padding: 6px 8px 10px;
+    gap: 5px;
+  }
+  .player-jumps button {
+    font-size: 12px;
+    padding: 8px 2px;
+  }
+}
+@media (max-width: 360px) {
+  .player-controls {
+    padding: 2px 2px 4px;
+  }
+  .player-controls::before {
+    top: -4px;
+  }
+  .player-toolbar {
+    gap: 1px;
+    min-height: 38px;
+  }
+  .player-control {
+    width: 26px;
+    height: 38px;
+    padding: 3px;
+  }
+  .player-controls svg {
+    width: 20px;
+    height: 20px;
+  }
+  .player-time {
+    font-size: 12px;
+  }
+  .player-settings-trigger {
+    width: auto;
+    min-width: 28px;
+    font-size: 12px;
+  }
+}
+
+/* One explicit, standard bold face in ordinary and fullscreen presentation. */
+.player-controls,
+.player-settings-menu {
+  font-weight: 700;
+  font-synthesis: weight;
+}
+.player-jumps button {
+  font-weight: 650;
+}
+.player-area:fullscreen .player-controls[data-controls-hidden="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.player-controls .player-settings-trigger {
+  font-weight: 750;
+}
+.player-controls svg,
+.player-jumps button > svg {
+  stroke-width: 2.2;
+}
+.player-jumps button {
+  color: var(--accent);
+}

@@ -1,27 +1,33 @@
 # Sefang
 
-Sefang **2.1.0** is a self-hosted, read-only video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, actor/category/issuer directories and standalone controls around a single native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. There is no web login, administration panel, upload or message-edit endpoint. The current UI has no footer and omits raw-message descriptions; original files and messages are not deleted.
+Sefang **2.2.0** is a self-hosted, read-only video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, actor/category/issuer directories and standalone controls around a single native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. There is no web login, administration panel, upload or message-edit endpoint. The current UI has no footer and omits raw-message descriptions; original files and messages are not deleted.
 
 **Do not expose private channel material to the public.** The web interface is anonymous and has no access-control layer. Bind to loopback; if remote access is needed, configure your own TLS reverse proxy and appropriate access control. Telegram access authorization alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no videos, photographs, channel data or credentials.
 
-## Changes in 2.1.0
+## Changes in 2.2.0
 
-- Standalone player controls with a single-row timeline, complete time labels,
-  seven playback speeds, keyboard support and wrapper fullscreen. Manual 30-second
-  and 5-minute jumps stay within the current segment; fullscreen keeps the
-  timeline and restores the outside jump buttons on exit.
-- Desktop volume uses an inline horizontal slider and a direct mute button.
-  Phones, including touch-device landscape and wrapper fullscreen, show only
-  the mute/unmute button. The current UI has **no volume popup**.
-- Improved control contrast and mobile timeline-endpoint spacing. Cover duration
-  and number badges are hidden across home, entity and related-video cards;
-  titles retain their numbers. Actor pages do not mount category or issuer filters;
-  category and issuer pages retain their own respective filters. Existing filter
-  URLs, sorting, pagination and return navigation are unchanged.
-- Shared core **2026.10.25.1** recognizes the known `200GANA` shop prefix as the
-  same work as `GANA`, while unknown prefixes and conflicting printed numbers
-  still fail closed. `Description:` now ends fallback tag fields rather than
-  leaking synopsis text into genres.
+- Refined dark/coral browsing UI with consistent spacing, typography, responsive
+  directories and detail pages. Header and content share one background without
+  a divider; only the current page title is shown.
+- Route loaders keep current content visible until the next list or directory is
+  ready, avoiding the intermediate skeleton flash. Search, filters, pagination
+  and return position continue to work together.
+- Video sorting offers **joined time, duration and release date**, each ascending
+  or descending. The default is joined time descending; unknown values stay
+  last in either direction. Name sorting is removed. Changing a sort resets the
+  page while retaining filters, and return links retain the full sort state.
+- Wrapper-fullscreen controls hide after **one second** of playback inactivity.
+  Pointer/keyboard activity restores them; pause, buffering, menus, dragging and
+  keyboard focus keep them accessible. Non-fullscreen controls stay visible.
+  Time labels use the same bold style in both modes. Native system fullscreen
+  remains controlled by the browser/platform.
+- Artwork is pure by default: obsolete overlay branches and badge parameters
+  are removed rather than disabled per page. Shared cards, paging, data helpers
+  and styles are reused, and unused dialog/popover dependencies are removed.
+- Shared core **2026.10.25.1** and other pinned dependency versions are unchanged.
+  No data migration is needed. Existing sort values `newest`, `oldest`, `duration`
+  and `release` remain; `duration_asc` and `release_asc` add the other directions.
+  The removed `name` sort is no longer accepted by the API.
 
 See [CHANGELOG.md](CHANGELOG.md) for the release summary and
 [docs/RELEASE.md](docs/RELEASE.md) for verification boundaries.
