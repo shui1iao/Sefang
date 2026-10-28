@@ -1,3 +1,4 @@
+import { requireLogin } from "./auth-client";
 export type DataResult<T> = { data?: T; error?: string };
 
 /** The same response policy is used by page loaders and asynchronous side panels. */
@@ -6,6 +7,7 @@ export async function readJson<T>(
   signal: AbortSignal,
 ): Promise<T> {
   const response = await fetch(url, { signal });
+  if (response.status === 401) requireLogin();
   if (!response.ok) {
     throw Error(
       response.status === 404

@@ -1,6 +1,5 @@
 import {useEffect,useId,useRef,useState,type RefObject} from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import {Link} from 'react-router';
 import {labels,type Kind} from './navigation';
 import {displayName,nameHint} from './display';
 import {facetItems,type FacetEntity} from './facet-model';
@@ -59,7 +58,7 @@ function useSelected(kind:Kind,value:string){
 function restoreTrigger(event:Event,trigger:RefObject<HTMLButtonElement|null>){event.preventDefault();trigger.current?.focus({preventScroll:true})}
 function Chevron(){return <svg className="picker-chevron" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m4 6 4 4 4-4"/></svg>}
 function Check(){return <span className="picker-check" aria-hidden="true">✓</span>}
-export function FacetStrip({kind,value,onChange}:{kind:'categories'|'studios';value:string;onChange:(value:string)=>void}){
+export function FacetStrip({kind,value,onChange}:{kind:Kind;value:string;onChange:(value:string)=>void}){
  const [requested,setRequested]=useState(false),[expanded,setExpanded]=useState(false),[query,setQuery]=useState('');
  const catalog=useCatalog(kind,requested),selected=useSelected(kind,value),label=labels[kind],id=useId();
  const selectedId=kind==='categories'?(selected.entity?.id??value):value;
@@ -68,11 +67,10 @@ export function FacetStrip({kind,value,onChange}:{kind:'categories'|'studios';va
  const selectedButton=useRef<HTMLButtonElement>(null);
  useEffect(()=>{const node=selectedButton.current,parent=node?.parentElement;if(!node||!parent||expanded)return;const box=node.getBoundingClientRect(),row=parent.getBoundingClientRect();if(box.left<row.left||box.right>row.right)parent.scrollLeft+=box.left-row.left-2},[value,current?.id,catalog.items.length,expanded]);
  return <section className="facet-section" data-facet={kind} aria-label={'按'+label+'筛选'}>
-  <div className="facet-heading"><div className="facet-label"><strong>选择{label}</strong><LinkToDirectory kind={kind}/></div>
+  <div className="facet-heading"><div className="facet-label"><strong>选择{label}</strong></div>
    <div className="facet-search"><input aria-label={'搜索'+label+'名称'} placeholder={'搜索'+label+' / 原名'} maxLength={200} value={query} onFocus={()=>setRequested(true)} onChange={e=>{setRequested(true);setQuery(e.target.value)}}/>{query&&<button type="button" aria-label={'清空'+label+'搜索'} onClick={()=>setQuery('')}>×</button>}</div>
    <button className="quiet facet-expand" type="button" aria-expanded={expanded} aria-controls={id} onClick={()=>{setRequested(true);setExpanded(v=>!v)}}>{expanded?'收起'+label:'展开全部'+label}</button>
   </div>
-  {value&&<div className="facet-selection" data-facet-selection="" role="status"><span title={current?nameHint(current):value}>已选：{current?displayName(current):selected.error?'名称未取得':'正在读取…'}</span><button type="button" onClick={()=>onChange('')}>清除{label}</button>{selected.error&&!current&&<button type="button" onClick={selected.retry}>重试名称</button>}</div>}
   <div id={id} className={'facet-strip'+(expanded?' expanded':'')} role="group" aria-label={label+'选项'} onScroll={()=>setRequested(true)}>
    <button type="button" className={'facet-choice'+(!value?' selected':'')} aria-pressed={!value} data-entity-option="" onClick={()=>onChange('')}>全部{label}</button>
    {matches.map(entity=><button type="button" ref={selectedId===entity.id?selectedButton:undefined} key={entity.id} data-entity-option={entity.id} className={'facet-choice'+(selectedId===entity.id?' selected':'')} aria-pressed={selectedId===entity.id} title={nameHint(entity)} onClick={()=>onChange(entity.id)}>{displayName(entity)}<small>{entity.count}</small></button>)}
@@ -80,7 +78,6 @@ export function FacetStrip({kind,value,onChange}:{kind:'categories'|'studios';va
   <div className="facet-status">{catalog.error?<span role="alert">{catalog.error} <button type="button" onClick={catalog.retry}>重试</button></span>:catalog.loading?<span role="status">正在读取{requested?'完整':''}{label}目录…</span>:<span>{catalog.complete?`${matches.length} / ${catalog.total}`:`已显示 ${matches.length} / ${catalog.total??'…'}`} 个{label}{!catalog.complete&&' · 搜索或展开可读取全部'}</span>}{catalog.complete&&!matches.length&&<span role="status">没有匹配的{label}，试试其他名称。</span>}</div>
  </section>;
 }
-function LinkToDirectory({kind}:{kind:Kind}){return <Link to={'/'+kind}>{labels[kind]}目录 <span aria-hidden="true">↗</span></Link>}
 export function SortPicker({value,onChange}:{value:string;onChange:(value:string)=>void}){
  const [open,setOpen]=useState(false);
  const triggerRef=useRef<HTMLButtonElement>(null);

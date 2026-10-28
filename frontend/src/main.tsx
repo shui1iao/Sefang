@@ -1,3 +1,7 @@
+import { History } from "./History";
+import type { Resume } from "./history-client";
+import { Accounts, AccountActions, Login } from "./Accounts";
+import { currentSession, sessionCheck } from "./auth-client";
 import {
   Fragment,
   useCallback,
@@ -25,6 +29,7 @@ import {
   filterKey,
   listLink,
   facetLink,
+  hasSessionBack,
   normalizeQuery,
   safeLink,
   safeReturn,
@@ -44,10 +49,12 @@ import {
 import { useData, useScroll } from "./hooks";
 import { Avatar, Icon, Loading, Message, Pages, VideoGrid } from "./components";
 import type { Entity, Page, Video } from "./types";
-import { loadDirectory, loadVideoList, type ListData } from "./loaders";
-import type { DataResult } from "./data";
+import { loadDirectory, loadVideoList, type ListData, type DirectoryData } from "./loaders";
+import { useCategoryPagination } from "./category-pagination";
 import "./style.css";
 import "./player.css";
+
+const historyStart = history.state?.idx ?? 0;
 
 function Header() {
   const navigation = useNavigation();
@@ -108,6 +115,7 @@ function Header() {
             <Icon name="arrow" />
           </button>
         </form>
+        <AccountActions />
       </div>
     </header>
   );
@@ -193,6 +201,19 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
   }
   return (
     <main ref={root} className="container" data-list-page="">
+      {kind && (
+        <nav className="back-row">
+          <Link to={"/" + kind} onClick={(event) => {
+            if (!event.button && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && hasSessionBack(history.state, historyStart)) {
+              event.preventDefault();
+              navigate(-1);
+            }
+          }}>
+            <Icon name="back" />
+            返回
+          </Link>
+        </nav>
+      )}
       {!kind && !params.get("q") && (
         <ActorStrip selected={params.get("actor") || ""} search={query} />
       )}
@@ -212,15 +233,6 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
             >
               {title}
             </h1>
-            {entity.data && kind === "categories" && (
-              <p
-                className="muted"
-                data-entity-original=""
-                title={nameHint(entity.data)}
-              >
-                原名：{entity.data.name_original || entity.data.name}
-              </p>
-            )}
             <p className="muted">
               {data.data ? `${data.data.total} 个视频` : "正在读取视频"}
               {params.get("q") ? ` · “${params.get("q")}”` : ""}
@@ -232,49 +244,23 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
           onChange={(value) => change("sort", value)}
         />
       </div>
-      {(kind || params.size > 0) && (
+      {kind && (
         <div className="filters">
-          {kind && kind !== "actors" && (
-            <>
-              {kind !== "studios" && (
-                <FacetStrip
-                  kind="categories"
-                  value={params.get("category") || ""}
-                  onChange={(v) =>
-                    navigate(
-                      facetLink(
-                        loc.search,
-                        "category",
-                        v,
-                        kind && entityId ? { kind, id: entityId } : undefined,
-                      ),
-                    )
-                  }
-                />
-              )}
-              {kind !== "categories" && (
-                <FacetStrip
-                  kind="studios"
-                  value={params.get("studio") || ""}
-                  onChange={(v) =>
-                    navigate(
-                      facetLink(
-                        loc.search,
-                        "studio",
-                        v,
-                        kind && entityId ? { kind, id: entityId } : undefined,
-                      ),
-                    )
-                  }
-                />
-              )}
-            </>
-          )}
-          {params.size > 0 && (
-            <Link className="clear" to="/">
-              清除筛选
-            </Link>
-          )}
+          <FacetStrip
+            key={kind}
+            kind={kind}
+            value={params.get(filterKey(kind)) || ""}
+            onChange={(v) =>
+              navigate(
+                facetLink(
+                  loc.search,
+                  filterKey(kind),
+                  v,
+                  entityId ? { kind, id: entityId } : undefined,
+                ),
+              )
+            }
+          />
         </div>
       )}
       {entity.error ? (
@@ -307,11 +293,14 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
     </main>
   );
 }
+// Read the existing router synchronously, including a navigation not rendered by React yet.
+function categoryPendingLocation() { return router.state.navigation.location; }
 function Directory({ kind }: { kind: Kind }) {
   const loc = useLocation(),
     navigate = useNavigate();
   const params = normalizeQuery(loc.search);
-  const data = useLoaderData() as DataResult<Page<Entity>>;
+  const data = useLoaderData() as DirectoryData;
+  useCategoryPagination(kind, data, categoryPendingLocation);
   const revalidator = useRevalidator();
   const root = useScroll(true);
   const [text, setText] = useState(params.get("q") || "");
@@ -395,6 +384,8 @@ function Watch() {
   const loc = useLocation(),
     navigate = useNavigate();
   const valid = validWatch(cid, mid);
+  const resumeId = new URLSearchParams(loc.search).get('resume') || '';
+  const restore = useData<Resume>(/^[0-9a-f]{32}$/.test(resumeId) ? `/api/history/${resumeId}/resume` : null);
   const data = useData<Video>(valid ? `/api/videos/${cid}/${mid}` : null);
   // 同组换段时沿用已取得的组数据，播放器与video节点不卸载；换到其他作品才重新加载。
   const [kept, setKept] = useState<Video | null>(null);
@@ -426,6 +417,15 @@ function Watch() {
     },
     [group, navigate, loc.state],
   );
+  const restoring = !!resumeId && restore.loading;
+  const verifiedRestore = restore.data && restore.data.account_id === currentSession()?.id && restore.data.work_id === group?.id ? restore.data : undefined;
+  useEffect(() => {
+    if (!verifiedRestore) return;
+    if (String(verifiedRestore.channel_id) !== cid || String(verifiedRestore.message_id) !== mid) {
+      navigate(`/watch/${verifiedRestore.channel_id}/${verifiedRestore.message_id}?resume=${resumeId}`, {replace:true,state:loc.state});
+    }
+  }, [verifiedRestore,cid,mid,resumeId,navigate,loc.state]);
+  const restoreRedirect = verifiedRestore && (String(verifiedRestore.channel_id) !== cid || String(verifiedRestore.message_id) !== mid);
   function back(event: React.MouseEvent<HTMLAnchorElement>) {
     if (
       event.button ||
@@ -444,6 +444,7 @@ function Watch() {
   const current = multi ? group.parts[index] : null;
   const title = video ? displayTitle(video) : "";
   const code = video?.code?.trim() || "";
+  const titleTranslationLabel = video ? translationLabel(video.title_translation) : "";
   return (
     <main ref={root} className="container watch" data-watch-page="">
       <nav className="back-row">
@@ -454,7 +455,7 @@ function Watch() {
       </nav>
       {!valid ? (
         <Message title="观看地址无效" />
-      ) : video && group ? (
+      ) : restoring || restoreRedirect ? <Loading /> : video && group ? (
         <>
           {multi || video.available ? (
             <Player
@@ -463,12 +464,15 @@ function Watch() {
               group={group}
               index={index}
               onSegment={toSegment}
+              restore={verifiedRestore}
             />
           ) : (
             <Message title="视频不可用">
               原消息已删除或当前账号无权限，现有资料保留供查看。
             </Message>
           )}
+          {resumeId && (restore.error || (!restoring && !verifiedRestore)) && <p className="player-notice">历史位置未取得，已按普通入口打开。</p>}
+          {verifiedRestore?.note && <p className="player-notice">{verifiedRestore.note}</p>}
           <section className="watch-info" data-watch-info="">
             <h1 data-display-title="">
               {code && title.startsWith(code) ? (
@@ -482,9 +486,9 @@ function Watch() {
             </h1>
             {!["machine", "dictionary"].includes(
               video.title_translation?.method || "",
-            ) && (
+            ) && titleTranslationLabel && (
               <p className="muted" data-translation-label="">
-                {translationLabel(video.title_translation)}
+                {titleTranslationLabel}
               </p>
             )}
             <details className="original" data-original-title="">
@@ -587,6 +591,12 @@ function InitialPage() {
   );
 }
 function Layout() {
+  useEffect(() => {
+    const check = () => { sessionCheck().catch(() => {}); };
+    const timer = window.setInterval(check, 5000);
+    window.addEventListener("focus", check);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", check); };
+  }, []);
   return (
     <>
       <Header />
@@ -594,10 +604,15 @@ function Layout() {
     </>
   );
 }
-const router = createBrowserRouter([
+let router: ReturnType<typeof createBrowserRouter>;
+function renderApp() {
+router = createBrowserRouter([
+  { path: "/login", element: <Login /> },
   {
     element: <Layout />,
     children: [
+      { path: "/history", element: <History /> },
+      { path: "/admin/accounts", element: <Accounts /> },
       {
         path: "/",
         loader: (args: Parameters<typeof loadVideoList>[0]) =>
@@ -640,3 +655,10 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")!).render(
   <RouterProvider router={router} />,
 );
+
+}
+// No protected component is mounted before the server has validated the cookie.
+if (window.location.pathname === "/login") renderApp();
+else sessionCheck().then(person => { if (person) renderApp(); }).catch(() => {
+  createRoot(document.getElementById("root")!).render(<main className="login-shell"><section className="account-panel"><h1>登录状态未取得</h1><p className="muted">请检查连接后刷新重试。</p><button onClick={() => window.location.reload()}>重试</button></section></main>);
+});

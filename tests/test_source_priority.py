@@ -1,3 +1,4 @@
+from support import auth_headers
 """Direct source-field and normal-owner/work-cover integration; all IO is local/fake."""
 import asyncio,io,json,tempfile,unittest,sys,time
 from pathlib import Path
@@ -179,7 +180,7 @@ class FallbackAPI(unittest.IsolatedAsyncioTestCase):
    app=create_app(cfg,link_factory=FakeLink);calls=[];blob=picture()
    async def thumbnail(cid,mid):calls.append((cid,mid));return blob
    app.state.telegram.thumbnail=thumbnail
-   async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as c:
+   async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='https://test', headers=auth_headers(app)) as c:
     r=await c.get('/api/videos/123/1/thumbnail');self.assertEqual(r.content,b'bad formal');self.assertEqual(calls,[])
     r=await c.get('/api/videos/123/1/thumbnail?skip_cover=true');self.assertEqual(r.content,blob);self.assertEqual(len(calls),1)
     blob=picture((0,0,0));r=await c.get('/api/videos/123/1/thumbnail?skip_cover=true');self.assertEqual(r.status_code,404);self.assertEqual(r.json()['reason'],'black')

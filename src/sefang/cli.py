@@ -5,19 +5,39 @@ import sqlite3
 
 from .config import Config
 
-ACTIONS = ["serve", "entities", "avatars", "status", "metadata-pause", "metadata-resume", "fill-missing-covers", "translate", "translation-status", "translation-pause", "translation-resume"]
+ACTIONS = ["init-admin", "serve", "entities", "avatars", "status", "metadata-pause", "metadata-resume", "fill-missing-covers", "translate", "translation-status", "translation-pause", "translation-resume"]
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="sefang")
+    parser = argparse.ArgumentParser(prog="sefang", allow_abbrev=False)
     parser.add_argument("action", choices=ACTIONS)
     parser.add_argument("--host", default="127.0.0.1", choices=["127.0.0.1"])
     parser.add_argument("--port", type=int, default=18943)
     parser.add_argument("--include-missing", action="store_true", help="avatars: also retry actors without a portrait")
     parser.add_argument("--limit", type=int, default=0, help="fill-missing-covers: stop after this many works")
     parser.add_argument("--dry-run", action="store_true", help="fill-missing-covers: look up but do not install")
-    args = parser.parse_args()
+    parser.add_argument("--username", help="init-admin: local administrator name")
+    parser.add_argument("--max-playbacks", type=int, help="init-admin: required simultaneous playback limit")
+    parser.add_argument("--password-stdin", action="store_true", help="init-admin: read one password line from stdin")
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        parser.error("不支持此参数；密码仅通过终端或标准输入提供")
     config = Config.environment()
+    if args.action == "init-admin":
+        import getpass
+        import sys
+        from .auth import AuthStore
+        if not args.username or not args.max_playbacks or args.max_playbacks < 1:
+            parser.error("init-admin requires --username and --max-playbacks > 0")
+        password = sys.stdin.readline().rstrip("\r\n") if args.password_stdin else getpass.getpass("管理员密码（不回显）: ")
+        if not args.password_stdin and password != getpass.getpass("再次输入: "):
+            parser.error("两次密码不一致")
+        try:
+            AuthStore(config.data / "state/auth/accounts.sqlite3").bootstrap(args.username, password, args.max_playbacks)
+        except ValueError as error:
+            parser.error(str(error))
+        print("Administrator initialized; existing accounts were not overwritten.")
+        return
     if args.action in ("translate", "translation-status", "translation-pause", "translation-resume"):
         import asyncio
         from .localization import command

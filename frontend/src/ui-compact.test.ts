@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { VideoGrid, Pages } from "./components";
+import { FacetStrip } from "./pickers";
 import type { Video } from "./types";
 import mainSource from "./main.tsx?raw";
 import components from "./components.tsx?raw";
@@ -69,14 +70,25 @@ describe("shared UI contracts", () => {
     expect(html).toContain('aria-label="跳转页码"');
     expect(render(createElement(Pages, { page: 1, pages: 1 }))).toBe("");
   });
-  it("mounts only the existing own facet, with no actor/home extra requests", () => {
-    expect(main).toMatch(/kind&&kind!=='actors'&&\(?<>/);
-    expect(main).toMatch(/kind!=='studios'&&\(?<FacetStripkind='categories'/);
-    expect(main).toMatch(/kind!=='categories'&&\(?<FacetStripkind='studios'/);
-    expect(main).toContain(
-      "<LinkclassName='clear'to='/'>清除筛选</Link>",
-    );
+  it("mounts one keyed own-kind facet on all entity pages, with no home/search extra facets", () => {
+    expect(main).toContain("kind&&(<divclassName='filters'><FacetStripkey={kind}kind={kind}value={params.get(filterKey(kind))||''}");
+    expect(main).toContain("kind&&(<navclassName='back-row'>");
+    expect(main).not.toContain("清除筛选");
+    expect(pickers).not.toContain("LinkToDirectory");
+    expect(pickers + css).not.toContain("facet-selection");
+    expect(pickers).toContain("selectedId===entity.id");
+    expect(pickers).toContain("selectedButton");
+    expect(css).not.toContain(".clear");
+    expect(css).not.toContain(".facet-label a");
     expect(main).toMatch(/!kind&&!params.get\('q'\)&&\(?<ActorStrip/);
+  });
+  it("renders all three facet types without selected/clear rows, preserving all and controls", () => {
+    for (const [kind,label] of [["actors","演员"],["categories","分类"],["studios","发行商"]] as const) {
+      const html=render(createElement(FacetStrip,{kind,value:"a".repeat(24),onChange:()=>{}}));
+      expect(html).toContain('data-facet="'+kind+'"');
+      for(const text of ["选择"+label,"全部"+label,"搜索"+label+"名称","展开全部"+label]) expect(html).toContain(text);
+      for(const old of ["已选：","清除"+label,"data-facet-selection","重试名称"]) expect(html).not.toContain(old);
+    }
   });
   it("keeps one nonmodal anchored sorting menu, no sheet or overlay", () => {
     expect(pickers).toContain("modal={false}");

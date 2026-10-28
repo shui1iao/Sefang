@@ -75,3 +75,12 @@ def source_cast(index):
                           'returned_id':row['code'],'fields':['performers']}]
                 db.execute("UPDATE tg_work SET state='matched',metadata=?,sources=? WHERE identity=?",
                            (json.dumps(fields),json.dumps(sources),row['identity']))
+
+
+def auth_headers(app):
+    """Local-only fixture, independent of real administrator credentials."""
+    import secrets
+    password = secrets.token_urlsafe(18)
+    app.state.auth.bootstrap("fixture_admin", password, 4)
+    token = app.state.auth.login("fixture_admin", password, "isolated-regression")
+    return {"Cookie": "__Host-sefang_session=" + token}

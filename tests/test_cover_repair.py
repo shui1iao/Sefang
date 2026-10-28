@@ -60,7 +60,7 @@ class ThumbnailApi(unittest.IsolatedAsyncioTestCase):
                                     (picture((1,1,1),'JPEG'),200,''),(picture(pixel=(1,0,0)),200,'')]:
             self.tg.thumbnail=AsyncMock(return_value=data)
             r=await self.client.get(url)
-            self.assertEqual(status,r.status_code);self.assertEqual('no-store',r.headers['cache-control'])
+            self.assertEqual(status,r.status_code);self.assertIn('no-store',r.headers['cache-control'])
             if reason:self.assertEqual(reason,r.json()['reason'])
             else:self.assertTrue(r.headers['content-type'].startswith('image/'))
         self.tg.thumbnail=AsyncMock(side_effect=RuntimeError('not exposed'))
@@ -74,7 +74,7 @@ class ThumbnailApi(unittest.IsolatedAsyncioTestCase):
         self.tg.thumbnail=AsyncMock(side_effect=AssertionError('TG called'))
         with patch('sefang.app.inspect_thumbnail',side_effect=AssertionError('checked formal cover')):
             r=await self.client.get('/api/videos/123/1/thumbnail')
-        self.assertEqual((200,'public, max-age=3600'),(r.status_code,r.headers['cache-control']))
+        self.assertEqual((200,'private, no-store, max-age=0'),(r.status_code,r.headers['cache-control']))
         self.tg.thumbnail.assert_not_called()
 
     async def test_decode_timeout_is_unavailable(self):

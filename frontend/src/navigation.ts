@@ -19,11 +19,18 @@ export function listLink(patch:Record<string,string>,search=''){const p=normaliz
 export function validWatch(cid:string,mid:string){return [cid,mid].every(v=>/^[1-9]\d{0,15}$/.test(v)&&Number.isSafeInteger(Number(v)))}
 /** 段间切换用replace：只带上原列表from和分段标记，后退一次仍回原列表（筛选/页码/滚动）。 */
 export function segmentState(state:unknown){const from=state&&typeof state==='object'?(state as {from?:unknown}).from:undefined;return {...(typeof from==='string'?{from}:{}),segment:true as const}}
-export function safeReturn(value:unknown){if(typeof value!=='string'||value.length>16000)return '/';try{const url=new URL(value,location.origin);return url.origin===location.origin&&(/^\/$|^\/(actors|studios|categories)(\/[0-9a-f]{24})?$/.test(url.pathname))?url.pathname+(url.search?'?'+normalizeQuery(url.search):''):'/'}catch{return '/'}}
+export function safeReturn(value:unknown){if(typeof value!=='string'||value.length>16000)return '/';try{const url=new URL(value,location.origin);return url.origin===location.origin&&(/^\/$|^\/history$|^\/(actors|studios|categories)(\/[0-9a-f]{24})?$/.test(url.pathname))?url.pathname+(url.search?'?'+normalizeQuery(url.search):''):'/'}catch{return '/'}}
 
-/** Facets leave entity routes for the canonical list, preserving their effective implicit filter. */
-export function facetLink(search:string,key:'category'|'studio',value:string,binding?:{kind:Kind;id:string}){
+/** Nonempty same-kind selections stay on entity routes; clear/cross-kind keep canonical-list semantics. */
+export function facetLink(search:string,key:'actor'|'category'|'studio',value:string,binding?:{kind:Kind;id:string}){
  const effective=normalizeQuery(search);
+ if(binding&&key===filterKey(binding.kind)&&value){
+  effective.delete(key);effective.delete('page');
+  return '/'+binding.kind+'/'+value+(effective.size?'?'+effective:'');
+ }
  if(binding)effective.set(filterKey(binding.kind),binding.id);
  return listLink({[key]:value},effective.toString());
 }
+
+/** Only entries pushed after this document boot are safe for an entity back link. */
+export function hasSessionBack(state:unknown,start:number){const idx=(state as {idx?:unknown}|null)?.idx;return typeof idx==='number'&&Number.isInteger(idx)&&idx>start}

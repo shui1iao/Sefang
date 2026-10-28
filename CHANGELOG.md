@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.0.0 — 2026-10-28
+
+### Breaking upgrade
+- All catalogue/image/media access requires a web account: anonymous APIs return 401, protected pages redirect to login. No default administrator/password; initialize locally with `sefang init-admin --username <chosen-name> --max-playbacks <chosen-limit>` and its non-echoing password prompt. Without an administrator, access fails closed. Browser login needs HTTPS, preserved Host, exact Origin and CSRF protection.
+- Preserve current configuration, Telegram session and the original four databases. Authentication and own-only history add private persistent stores; back them up too, never treat them as caches or restore stale state during a code rollback. No reimport/deletion or schema-migration system is required.
+
+### Features and repairs
+- Administrator-created accounts, enable/disable and password reset; 24-hour sessions with revocation. Default ordinary-account 2 MiB/s aggregate across sessions/windows/cache, explicitly set window limits, same-lease response cap 2 and unchanged global gate 2. No registration, billing, account expiry or device tracking.
+- Own-only long-lived playback history, including administrators; real playing starts recording. Explicit history resume restores part/time paused, with readiness gating and no automatic playback. Horizontal large centered covers and pink code/real-title presentation, neutral account actions, username management link and compact desktop limit-save button.
+- Ordinary/fullscreen guarded control hiding and gestures, same-kind entity navigation/return state, whole-row directory pagination, and existing post-2.2 UI changes.
+- Repaired mutual cancellation of same-lease Range responses and premature play during history restore. Temporary phone diagnostics are excluded; shared clean core 2026.10.25.1 and all dependency versions are retained.
+
+### Known issue — not fixed
+- iPhone history resume can play audio and advance the clock while the picture remains frozen. Cause unresolved; no real iPhone/iOS certification is claimed. The two Range/early-play repairs above are **not** evidence that this iPhone symptom is fixed. Ordinary-entry playback followed by manual seeking is a reported workaround, not a guaranteed repair. No additional freeze or unrelated legacy-bug fix is included.
+- MIT covers source code, not redistribution of media, messages, images or catalogue content. No security or Telegram-account-ban guarantee is made.
+
 ## 2.2.0 — 2026-10-26
 
 ### Browsing and reuse

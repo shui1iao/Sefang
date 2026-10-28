@@ -16,7 +16,7 @@ export function translationLabel(info?:TranslationInfo){
  if(info?.method==='machine')return '机翻，非官方中文';
  if(info?.method==='dictionary')return '中文释义';
  if(info?.method==='normalized_unverified')return '简体规范，原语言未确认';
- return '暂无可用译文，保留原文';
+ return '';
 }
-export const nameHint=(item:Named)=>item.name_original!==undefined?item.name_original:item.name_translation?.method==='actor_alias'?`${displayName(item)} · 同一演员`:item.name_translation?.method==='actor_original'?item.name:`${translationLabel(item.name_translation)} · 原名：${item.name}`;
-export const titleHint=(item:Titled)=>`${translationLabel(item.title_translation)} · 原标题：${item.title}`;
+export const nameHint=(item:Named)=>item.name_original!==undefined?item.name_original:item.name_translation?.method==='actor_alias'?`${displayName(item)} · 同一演员`:item.name_translation?.method==='actor_original'?item.name:[translationLabel(item.name_translation),`原名：${item.name}`].filter(Boolean).join(' · ');
+export const titleHint=(item:Titled)=>[translationLabel(item.title_translation),`原标题：${item.title}`].filter(Boolean).join(' · ');

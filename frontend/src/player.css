@@ -214,7 +214,7 @@
   }
 }
 
-/* Standalone Media Chrome time range; fullscreen-only idle visibility is UI-owned. */
+/* Standalone Media Chrome time range; ordinary/wrapper-fullscreen idle visibility is UI-owned. */
 .player-controls {
   position: absolute;
   inset: auto 0 0;
@@ -498,7 +498,7 @@
 .player-jumps button {
   font-weight: 650;
 }
-.player-area:fullscreen .player-controls[data-controls-hidden="true"] {
+.player-controls[data-controls-hidden="true"] {
   visibility: hidden;
   pointer-events: none;
 }
@@ -512,3 +512,7 @@
 .player-jumps button {
   color: var(--accent);
 }
+
+.player-restore { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#111318dc; padding:20px; text-align:center; z-index:2; }
+.player-restore p { margin:0; font-size:13px; color:var(--muted); }
+.player-restore strong { font-size:16px; }

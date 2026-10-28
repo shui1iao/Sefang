@@ -1,3 +1,4 @@
+from support import auth_headers
 """Only the requested video sorting contract; isolated temporary data, no TG/network."""
 import json
 import tempfile
@@ -78,7 +79,7 @@ class SortAPITests(unittest.IsolatedAsyncioTestCase):
                 db.execute('UPDATE tg_work SET state=?,metadata=? WHERE identity=?',
                            ('matched', json.dumps({'title': f'作品{mid}', 'release_date': release}), f'ABC-{mid}'))
         self.app = create_app(self.config)
-        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url='http://test')
+        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url='https://test', headers=auth_headers(self.app))
 
     async def asyncTearDown(self):
         await self.client.aclose()

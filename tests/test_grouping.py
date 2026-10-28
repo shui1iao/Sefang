@@ -1,3 +1,4 @@
+from support import auth_headers
 import hashlib,json,os,shutil,sqlite3,tempfile,unittest
 from collections import Counter
 from pathlib import Path
@@ -60,7 +61,7 @@ class EventApiTests(unittest.IsolatedAsyncioTestCase):
   self.config.secrets_root.mkdir(parents=True);(self.config.secrets_root/'telegram').mkdir()
   (self.config.secrets_root/'telegram/account.json').write_text(json.dumps({'channels':[CHANNEL],'session':'synthetic','api_id':1,'api_hash':'x'}))
   self.app=create_app(self.config,FakeLink);self.tg=self.app.state.telegram;self.tg.state='connected'
-  self.client=httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app),base_url='http://test')
+  self.client=httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app),base_url='https://test', headers=auth_headers(self.app))
  async def asyncTearDown(self):
   await self.client.aclose();await self.tg.stop();self.app.state.repository.close();self.tmp.cleanup()
  async def test_new_part_event_joins_group_without_refetch_and_legacy_link(self):
@@ -137,7 +138,7 @@ class AliasRepositoryTests(unittest.IsolatedAsyncioTestCase):
   part(self.store,1,'IPX-001(1).mp4',600.25);part(self.store,2,'IPX-001(2).mp4',300.5);part(self.store,3,'IPX-001(2).mp4',300.5);part(self.store,4,'ABC-002.mp4',100)
   with self.store.session() as db:db.execute("UPDATE tg_work SET state='matched',metadata=? WHERE identity='IPX-1'",(json.dumps({'title':'合成作品','performers':['甲'],'studio':'合成厂牌','tags':['合成分类']}),))
   source_cast(self.store)
-  self.app=create_app(self.config);self.repo=self.app.state.repository;self.repo.sync_entities();self.client=httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app),base_url='http://test')
+  self.app=create_app(self.config);self.repo=self.app.state.repository;self.repo.sync_entities();self.client=httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app),base_url='https://test', headers=auth_headers(self.app))
  async def asyncTearDown(self):
   await self.client.aclose();self.repo.close();self.tmp.cleanup()
  async def test_alias_dto_search_filters_entities_related(self):

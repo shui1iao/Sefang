@@ -1,41 +1,29 @@
 # Sefang
 
-Sefang **2.2.0** is a self-hosted, read-only video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, actor/category/issuer directories and standalone controls around a single native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. There is no web login, administration panel, upload or message-edit endpoint. The current UI has no footer and omits raw-message descriptions; original files and messages are not deleted.
+Sefang **3.0.0** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
 
-**Do not expose private channel material to the public.** The web interface is anonymous and has no access-control layer. Bind to loopback; if remote access is needed, configure your own TLS reverse proxy and appropriate access control. Telegram access authorization alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no videos, photographs, channel data or credentials.
+**Breaking change from 2.x: login is required.** Anonymous data/image/media APIs now return **401**; protected page requests redirect to `/login`. Public login assets and `/healthz` remain available. There is **no default administrator or password**. Without a locally initialized administrator, private data stays closed. Do not expose private channel material publicly. Telegram access alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no channel data, credentials, videos or photographs.
 
-## Changes in 2.2.0
+## Changes in 3.0.0
 
-- Refined dark/coral browsing UI with consistent spacing, typography, responsive
-  directories and detail pages. Header and content share one background without
-  a divider; only the current page title is shown.
-- Route loaders keep current content visible until the next list or directory is
-  ready, avoiding the intermediate skeleton flash. Search, filters, pagination
-  and return position continue to work together.
-- Video sorting offers **joined time, duration and release date**, each ascending
-  or descending. The default is joined time descending; unknown values stay
-  last in either direction. Name sorting is removed. Changing a sort resets the
-  page while retaining filters, and return links retain the full sort state.
-- Wrapper-fullscreen controls hide after **one second** of playback inactivity.
-  Pointer/keyboard activity restores them; pause, buffering, menus, dragging and
-  keyboard focus keep them accessible. Non-fullscreen controls stay visible.
-  Time labels use the same bold style in both modes. Native system fullscreen
-  remains controlled by the browser/platform.
-- Artwork is pure by default: obsolete overlay branches and badge parameters
-  are removed rather than disabled per page. Shared cards, paging, data helpers
-  and styles are reused, and unused dialog/popover dependencies are removed.
-- Shared core **2026.10.25.1** and other pinned dependency versions are unchanged.
-  No data migration is needed. Existing sort values `newest`, `oldest`, `duration`
-  and `release` remain; `duration_asc` and `release_asc` add the other directions.
-  The removed `name` sort is no longer accepted by the API.
+- Local administrator bootstrap; administrator-created accounts with enable/disable, password reset, aggregate rate limits and explicitly chosen playback-window limits. The top management link uses the current administrator username; ordinary users do not gain a management entry. Desktop limit-save buttons remain compact.
+- Each ordinary account defaults to **2 MiB/s total**, shared across sessions, windows and cache hits; administrators initially have no rate limit. The operator must set each account's simultaneous playback limit. A server-issued playback lease counts as one active window and permits at most **two concurrent GET responses**; a third is refused, not queued indefinitely. Unleased direct requests count separately. The existing global media gate remains **2**. These limits cannot retract bytes already buffered/downloaded and do not track physical devices.
+- Random **24-hour sessions**, Secure/HttpOnly/SameSite=Strict host-only cookies, exact HTTPS Origin and CSRF checks, server-side roles and login-attempt limiting. Logout revokes that session; disabling an account or changing its password revokes its sessions and active streams. There is no self-registration, account-expiry, billing or device-tracking system. These controls are not an absolute security guarantee.
+- History is own-only, **including for administrators**. Actual native `playing` starts a record; opening details, metadata/preload or seeking without playback does not. History is retained until the owner deletes it, with pagination and confirmed delete/clear. Only a history link restores the saved part and position, **paused**, after readiness checks; a fresh user click is needed. Ordinary links do not implicitly resume.
+- History cards stay horizontal at small widths, with large vertically centered covers, pink work codes and real work titles rather than filenames; missing titles remain explicit placeholders. Normal and wrapper-fullscreen controls share guarded idle hiding and touch gestures; native platform fullscreen remains browser-controlled.
+- Same-lease overlapping Range responses no longer cancel each other, and early play is gated while a history position is being restored. **These two repairs do not establish that the iPhone freeze is fixed.**
+- Existing post-2.2 navigation, same-kind actor/category/issuer switching and return state, whole-row directory pagination and six-direction video sorting are retained. Shared core **2026.10.25.1**, name/orthography data and all dependency versions remain unchanged. Temporary phone-diagnostic entry points are not distributed.
 
-See [CHANGELOG.md](CHANGELOG.md) for the release summary and
-[docs/RELEASE.md](docs/RELEASE.md) for verification boundaries.
+## Known playback issue
+
+**iPhone history resume may have continuous audio and an advancing clock while the video picture remains frozen. This is unresolved; the cause is not established.** Successful desktop/Chromium checks are not iOS certification, and no real iPhone/iOS playback verification is claimed for this release. The overlapping-Range and early-play fixes must not be read as a fix for this symptom. If affected, use the ordinary work entry and manually seek after playback starts; this is a reported workaround, not a guaranteed repair. No further freeze or unrelated legacy-bug fix is included.
+
+See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md) for upgrade and verification boundaries.
 
 ## Requirements
 
 - Python **3.14 or newer**, `uv`, Node.js **22.12+** (or 20.19+) and npm.
-- A legal Telegram user account, your own API application credentials, an already-authorized Telethon StringSession and an explicit allowlist of channels. The site **does not perform login**. Obtain credentials and a session separately using Telegram/Telethon's documented process; never send them to a repository or issue tracker.
+- A legal Telegram user account, your own API application credentials, an already-authorized Telethon StringSession and an explicit allowlist of channels. The site **does not perform Telegram login** (web-account login is separate). Obtain credentials and a session separately using Telegram/Telethon's documented process; never send them to a repository or issue tracker.
 - Sufficient local storage for metadata and bounded caches. Slice cache and catalogue covers are each capped at **512 MiB**; actor portraits are capped at 64 MiB total, 2 MiB each and 512 files. These are caches, not an archival copy of a channel.
 
 ## Install and build
@@ -76,10 +64,23 @@ export SEFANG_CHANNEL_IDS=123
 export SEFANG_OFFLINE=1
 # Initialize a NEW disconnected index only (never copy someone else's database).
 .venv/bin/python -c 'from sefang.config import Config; from sefang.tg.index import ChannelIndex; ChannelIndex(Config.environment().db)'
+# Explicit local bootstrap; getpass prompts twice without echo. Choose your own name.
+# Passwords must be 12–256 characters; never put one in argv or shell history.
+.venv/bin/sefang init-admin --username library_admin --max-playbacks 2
 .venv/bin/sefang serve --host 127.0.0.1 --port 18943
 ```
 
-With a new data directory and `SEFANG_OFFLINE=1`, this starts an empty disconnected library. It is useful for installation checks, **not** evidence of a functioning Telegram session. Open `http://127.0.0.1:18943/` or `/healthz`. Stop the process before configuring the real owner.
+With a new data directory and `SEFANG_OFFLINE=1`, this starts an empty disconnected library. It is useful for installation checks, **not** evidence of a functioning Telegram session. `http://127.0.0.1:18943/healthz` is a health check only: **do not use HTTP for login**. A Secure cookie and HTTPS Origin are required, even on a disconnected installation. Bootstrap refuses an existing administrator or conflicting name; it does not overwrite accounts. No bootstrap is performed automatically by the server.
+
+For browser use, configure a trusted HTTPS endpoint on your own domain, forwarding to the loopback server and **preserving the original Host, including any port**. For example, a separately installed Caddy can use this generic configuration (its default reverse proxy preserves Host):
+
+```caddyfile
+library.example.org {
+    reverse_proxy 127.0.0.1:18943
+}
+```
+
+Replace the example domain with one you control and configure its DNS/TLS; the repository does not install or edit a proxy. Visit `https://library.example.org/login`, not the upstream HTTP URL. Writes require an exact HTTPS Origin matching Host and, after login, the session's CSRF token; replacing Host with the upstream address breaks this check. Never disable cookie security or Origin/CSRF checks to make an HTTP quickstart appear to work. For local tests use a trusted local certificate and HTTPS with the same host/port. Stop the owner before configuring the real Telegram connection.
 
 For an authorized online instance, create a private JSON file at `$SEFANG_DATA_ROOT/secrets/telegram/account.json` with the following schema. Do **not** copy these placeholder strings as real credentials:
 
@@ -110,6 +111,12 @@ No installation-specific actor/hashtag allowlist is shipped. Missing files behav
 - `$SEFANG_STATE_ROOT/actor-aliases.json`: `{"version":1,"groups":[]}`. Each reviewed group uses `canonical`, `aliases`, a stable 24-hex `id`, and optional reliable Chinese `name_zh`. The default ID for a new canonical actor is the first 24 hex characters of SHA256 of `"actors\0" + canonical`; retain the chosen ID thereafter. Maximum 38 groups; overlapping identities are rejected. Only the shared reviewed display-name table supplies Chinese display labels; arbitrary translations do not create identities. Copy `deploy/actor-aliases.example.json` only if needed.
 
 Category policy is shipped as source data: 83 explicit merge groups, 306 approved canonical hashtag tokens, 21 exact promotional drops and 128 retired IDs. It preserves original labels and search-only Chinese aliases; unknown tags are not inferred into new approved identities. Retired entity IDs resolve to no entity and filtering them returns no results. This is a policy table, **not** a snapshot of channel contents or a promise that an empty installation has 306 populated categories.
+
+## Upgrade from 2.x and persistent data
+
+This is a major upgrade, not an anonymous-service drop-in replacement. Stop the single owner normally and back up the **current** configuration, Telegram credentials/session, original four databases and sidecars, derived state, role/alias files and caches before replacing code. Keep their locations and contents; there is no old-data reimport, restore or deletion step and no new migration framework. Rebuild/install locked code and assets as above. Run the local `init-admin` command with explicit `--username` and `--max-playbacks` if no administrator exists; use the non-echoing terminal prompt, not a password argument. Then start one owner behind HTTPS and verify login before sharing access.
+
+The application safely adds `$SEFANG_DATA_ROOT/state/auth/accounts.sqlite3` and `$SEFANG_DATA_ROOT/state/history/history.sqlite3` (private directories 0700, files 0600) without rewriting the original four databases. **Authentication and history are persistent business data, not disposable caches**: preserve their complete directories, accounts, sessions, histories and deletion/generation state in consistent backups with all existing data. Do not clear them for an upgrade. On later code changes, preserve every current legitimate increment; never restore an old database just to roll back code. An older anonymous version must not be exposed as a public fallback. These notes do not authorize downtime or data changes on any existing installation.
 
 ## Local maintenance and tests
 

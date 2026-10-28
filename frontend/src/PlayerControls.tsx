@@ -18,10 +18,10 @@ function Icon({name}:{name:'play'|'pause'|'muted'|'volume'|'settings'|'fullscree
  const paths={rewind:<path d="m11 5-8 7 8 7Zm10 0-8 7 8 7Z"/>,forward:<path d="m3 5 8 7-8 7Zm10 0 8 7-8 7Z"/>,play:<path d="m8 5 11 7-11 7Z"/>,pause:<><path d="M8 5v14M16 5v14"/></>,muted:<><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="m16 9 6 6m0-6-6 6"/></>,volume:<><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></>,settings:<><path d="m9 3-.7 2.2-2 .9L4.2 6l-1.5 2.6L4.2 10v2L2.7 14l1.5 2.6 2.1-.1 2 .9L9 20h3l.7-2.6 2-.9 2.1.1 1.5-2.6-1.5-2v-2l1.5-1.4L16.8 6l-2.1.1-2-.9L12 3Z"/><circle cx="10.5" cy="11.5" r="3"/></>,fullscreen:<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>};
  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
-export function PlayerControls({state,rate,available,fullscreen,area,onToggle,onSeek,onVolume,onMute,onRate,onFullscreen,onMenuOpen}:{state:PlaybackState;rate:number;available:boolean;fullscreen:boolean;area:RefObject<HTMLDivElement|null>;onToggle:()=>void;onSeek:(seconds:number)=>void;onVolume:(volume:number)=>void;onMute:()=>void;onRate:(rate:number)=>void;onFullscreen:()=>void;onMenuOpen:(open:boolean)=>void}){
+export function PlayerControls({state,rate,available,fullscreen,sourceKey,area,onToggle,onSeek,onVolume,onMute,onRate,onFullscreen,onMenuOpen}:{state:PlaybackState;rate:number;available:boolean;fullscreen:boolean;sourceKey:string;area:RefObject<HTMLDivElement|null>;onToggle:()=>void;onSeek:(seconds:number)=>void;onVolume:(volume:number)=>void;onMute:()=>void;onRate:(rate:number)=>void;onFullscreen:()=>void;onMenuOpen:(open:boolean)=>void}){
  const [open,setOpen]=useState(false);
  const controls=useRef<HTMLDivElement>(null);
- const hidden=useFullscreenControls({area,controls,fullscreen,canHide:available&&state.ready&&!state.paused&&!state.ended&&!state.loading&&!open});
+ const hidden=useFullscreenControls({area,controls,fullscreen,sourceKey,canToggle:available&&state.ready&&!state.ended&&!state.loading&&!open,canHide:available&&state.ready&&!state.paused&&!state.ended&&!state.loading&&!open});
  function menu(next:boolean){setOpen(next);onMenuOpen(next)}
  useEffect(()=>()=>onMenuOpen(false),[onMenuOpen]);
  return <div ref={controls} className="player-controls" data-player-controls="" data-controls-hidden={hidden?'true':undefined} aria-hidden={hidden||undefined} inert={hidden}>

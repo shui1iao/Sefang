@@ -147,7 +147,9 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         self.tg = self.app.state.telegram
         self.tg.state = "connected"
         self.tg.link.posts = {1: fake_message(1, name="IPX-001.mp4", document=901), 2: fake_message(2, name="IPX-002.mp4", document=902)}
-        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url="http://test")
+        self.app.state.auth.bootstrap("regression_admin", "isolated-regression-password", 4)
+        token = self.app.state.auth.login("regression_admin", "isolated-regression-password", "regression")
+        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url="https://test", headers={"Cookie": "__Host-sefang_session=" + token})
 
     async def asyncTearDown(self):
         await self.client.aclose()
@@ -263,7 +265,8 @@ class CancelTests(unittest.TestCase):
                     break
                 time.sleep(0.05)
             owner.state = "connected"
-            with httpx.Client() as client:
+            from support import auth_headers
+            with httpx.Client(headers=auth_headers(app)) as client:
                 with client.stream("GET", f"http://127.0.0.1:{port}/api/videos/123/1/stream") as r:
                     self.assertEqual(200, r.status_code)
                     next(r.iter_bytes())

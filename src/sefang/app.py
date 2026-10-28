@@ -1,4 +1,4 @@
-"""Anonymous read-only website: no login, no admin routes; maintenance happens through the local CLI."""
+"""Authenticated private website; account bootstrap remains local-only."""
 from contextlib import asynccontextmanager
 import asyncio
 import hashlib
@@ -6,6 +6,11 @@ import logging
 import re
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.responses import JSONResponse
+from .history import HistoryStore, router as history_router
+from .auth import AuthStore, router as auth_router
+from .access import Boundary, PlaybackControl, router as access_router
 from filelock import FileLock
 from starlette.responses import FileResponse, HTMLResponse, Response
 from starlette.staticfiles import StaticFiles
@@ -90,14 +95,25 @@ def create_app(config: Config, link_factory=TgLink):
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.config, app.state.repository, app.state.telegram, app.state.filler = config, repo, owner, filler
 
-    @app.middleware("http")
-    async def boundaries(request, call_next):
-        if request.method not in ("GET", "HEAD"):
-            return Response(status_code=405, headers={"Allow": "GET, HEAD", "X-Robots-Tag": "noindex, nofollow, noarchive"})
-        response = await call_next(request)
-        response.headers.update({"X-Robots-Tag": "noindex, nofollow, noarchive", "X-Content-Type-Options": "nosniff",
-                                 "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Content-Security-Policy": CSP})
-        return response
+    auth = AuthStore(config.data / "state/auth/accounts.sqlite3")
+    app.state.auth = auth
+    app.state.password_gate = asyncio.Semaphore(2)
+    app.state.playbacks = PlaybackControl(auth)
+    app.add_middleware(Boundary, store=auth, csp=CSP)
+    app.state.history = HistoryStore(config.data / "state/history/history.sqlite3")
+    app.include_router(history_router)
+    app.include_router(auth_router)
+    app.include_router(access_router)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(request, error):
+        # FastAPI's default validation response reflects raw passwords and request bodies.
+        return JSONResponse({"detail": "输入无效，请检查格式和必填项"}, status_code=422)
+
+    @app.exception_handler(Exception)
+    async def internal_error(request, error):
+        return JSONResponse({"detail": "请求未完成"}, status_code=500,
+                            headers={"Cache-Control": "private, no-store", "Vary": "Cookie", "Content-Security-Policy": CSP})
 
     @app.get("/healthz")
     def health():
@@ -155,7 +171,7 @@ def create_app(config: Config, link_factory=TgLink):
             raise HTTPException(404)
         with repo.read() as db:
             mime = db.execute("SELECT cover_mime FROM tg_work WHERE identity=?", (row["identity"],)).fetchone()[0]
-        return FileResponse(path, media_type=mime, headers={"Cache-Control": "public, max-age=3600"})
+        return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, no-store"})
 
     @app.api_route("/api/actors/{ident}/image", methods=["GET", "HEAD"])
     def avatar_image(ident: str):
@@ -170,7 +186,7 @@ def create_app(config: Config, link_factory=TgLink):
         path = repo.root / "avatars" / row[0]
         if not path.is_file() or path.stat().st_size > 2 * 1048576:
             raise HTTPException(404)
-        return FileResponse(path, media_type=row[1], headers={"Cache-Control": "public, max-age=3600"})
+        return FileResponse(path, media_type=row[1], headers={"Cache-Control": "private, no-store"})
 
     @app.get("/api/videos/{cid}/{mid}/thumbnail")
     async def thumbnail(cid: int, mid: int, skip_cover: bool = False):
@@ -199,6 +215,9 @@ def create_app(config: Config, link_factory=TgLink):
     if config.static.is_dir():
         app.mount("/assets", StaticFiles(directory=config.static / "assets"), name="assets")
 
+    @app.api_route("/history", methods=["GET", "HEAD"])
+    @app.api_route("/login", methods=["GET", "HEAD"])
+    @app.api_route("/admin/accounts", methods=["GET", "HEAD"])
     @app.api_route("/", methods=["GET", "HEAD"])
     @app.api_route("/actors", methods=["GET", "HEAD"])
     @app.api_route("/studios", methods=["GET", "HEAD"])

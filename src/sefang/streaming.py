@@ -12,6 +12,7 @@ import re
 from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import Response, StreamingResponse
 
+from .auth import COOKIE
 from .tg.cache import SLICE
 from .tg.link import TgProblem, explain
 
@@ -70,18 +71,41 @@ def _refusal(error: BaseException) -> HTTPException:
 
 @router.api_route("/api/videos/{channel_id}/{message_id}/stream", methods=["GET", "HEAD"])
 async def play(channel_id: int, message_id: int, request: Request):
+    control = request.app.state.playbacks
+    token = request.cookies.get(COOKIE, "")
+    person = control.guard(token)
     if channel_id not in request.app.state.config.channels or not 0 < message_id < 2 ** 53:
         raise HTTPException(404)
+    if request.method == "HEAD" and request.query_params.get("playback"):
+        control.check_lease(request.query_params["playback"], person, (channel_id, message_id))
     owner = request.app.state.telegram
     if owner is None:
         raise HTTPException(503, "媒体服务未连接")
-    try:
-        await asyncio.wait_for(owner.media_gate.acquire(), 3)
-    except asyncio.TimeoutError:
-        raise HTTPException(429, "当前播放请求较多，请稍后重试", headers={"Retry-After": "3"}) from None
+    transfer = None
+    gate_owned = False
     handed_over = False
+
+    async def acquire_gate():
+        nonlocal gate_owned
+        await owner.media_gate.acquire()
+        gate_owned = True
+
+    def finish():
+        nonlocal gate_owned
+        if gate_owned:
+            owner.media_gate.release()
+            gate_owned = False
+        if transfer is not None:
+            control.release(transfer)
+
     try:
-        row, message = await owner.locate(channel_id, message_id)
+        if request.method != "HEAD":
+            transfer = await control.claim(person, (channel_id, message_id), request.query_params.get("playback", ""))
+        try:
+            await control.wait(acquire_gate(), token, transfer, timeout=3)
+        except asyncio.TimeoutError:
+            raise HTTPException(429, "当前播放请求较多，请稍后重试", headers={"Retry-After": "3"}) from None
+        row, message = await control.wait(owner.locate(channel_id, message_id), token, transfer)
         size = row["size"]
         tag = f'"tg-{channel_id}-{message_id}-{row["document_id"]}"'
         wanted = request.headers.get("range", "")
@@ -99,26 +123,49 @@ async def play(channel_id: int, message_id: int, request: Request):
         if request.method == "HEAD" or size == 0:
             return Response(status_code=status, headers=headers, media_type=row["mime"])
         base = first - first % SLICE
-        opening = await owner.slice_at(row, message, base)
+        opening = await control.wait(owner.slice_at(row, message, base), token, transfer)
 
         async def pump():
             at, start, chunk = first, base, opening
             while at <= last:
                 if await request.is_disconnected():
                     return
+                control.guard(token, transfer)
                 owner.allowed(channel_id)
                 skip = at - start
-                n = min(len(chunk) - skip, last - at + 1)
-                if n <= 0:
+                remaining = min(len(chunk) - skip, last - at + 1)
+                if remaining <= 0:
                     raise TgProblem("媒体片段范围无效")
-                yield chunk[skip:skip + n]
-                at += n
+                while remaining:
+                    n = await control.grant(token, transfer, remaining)
+                    yield chunk[skip:skip+n]
+                    at += n
+                    skip += n
+                    remaining -= n
                 start += SLICE
                 if at <= last:
-                    chunk = await owner.slice_at(row, message, start)
+                    chunk = await control.wait(owner.slice_at(row, message, start), token, transfer)
 
-        response = SlotStream(pump(), status_code=status, media_type=row["mime"], headers=headers,
-                              on_finish=owner.media_gate.release)
+        class AuthorizedStream(SlotStream):
+            async def __call__(self, scope, receive, send):
+                # Also revoke blocked socket sends, not just owner/rate-limit waits.
+                parent = asyncio.current_task()
+                async def watch():
+                    while True:
+                        await asyncio.sleep(.25)
+                        try:
+                            control.guard(token, transfer)
+                        except HTTPException:
+                            parent.cancel()
+                            return
+                watcher = asyncio.create_task(watch())
+                try:
+                    await super().__call__(scope, receive, send)
+                finally:
+                    watcher.cancel()
+                    await asyncio.gather(watcher, return_exceptions=True)
+
+        response = AuthorizedStream(pump(), status_code=status, media_type=row["mime"], headers=headers, on_finish=finish)
         handed_over = True
         return response
     except HTTPException:
@@ -127,4 +174,4 @@ async def play(channel_id: int, message_id: int, request: Request):
         raise _refusal(error) from None
     finally:
         if not handed_over:
-            owner.media_gate.release()
+            finish()

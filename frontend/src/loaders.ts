@@ -3,7 +3,10 @@ import { filterKey, normalizeQuery, type Kind } from "./navigation";
 import { readResult, type DataResult } from "./data";
 import type { Entity, Page, Video } from "./types";
 
+import { currentCategoryPageSize } from "./category-pagination";
+
 const DIRECTORY_PAGE = 60;
+export type DirectoryData = DataResult<Page<Entity>> & { pageSize?: number };
 export type ListData = {
   list: DataResult<Page<Video>>;
   entity: DataResult<Entity>;
@@ -31,14 +34,16 @@ export async function loadVideoList(
   return { list, entity };
 }
 
-export function loadDirectory(
+export async function loadDirectory(
   { request }: LoaderFunctionArgs,
   kind: Kind,
-): Promise<DataResult<Page<Entity>>> {
+): Promise<DirectoryData> {
   const query = normalizeQuery(new URL(request.url).search);
-  query.set("limit", String(DIRECTORY_PAGE));
-  return readResult<Page<Entity>>(
+  const size = kind === "actors" ? DIRECTORY_PAGE : currentCategoryPageSize();
+  query.set("limit", String(size));
+  const result = await readResult<Page<Entity>>(
     `/api/entities/${kind}?${query}`,
     request.signal,
   );
+  return kind === "actors" ? result : { ...result, pageSize: size };
 }

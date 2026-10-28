@@ -1,3 +1,4 @@
+from support import auth_headers
 """Direct tests for removal only; metadata and existing localization stay intact."""
 import asyncio,json,sys,tempfile,unittest
 from pathlib import Path
@@ -15,7 +16,7 @@ class SeriesRemovalTests(unittest.IsolatedAsyncioTestCase):
    config=offline(Path(d));index,repo=seed(config,3);ident=entity_id('series','系列')
    with index.session() as db:before=db.execute('SELECT identity,metadata,sources FROM tg_work ORDER BY identity').fetchall()
    app=create_app(config)
-   async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='http://test') as client:
+   async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='https://test', headers=auth_headers(app)) as client:
     base=(await client.get('/api/videos')).json();old=(await client.get('/api/videos',params={'series':ident})).json();invalid=(await client.get('/api/videos',params={'series':'bad'})).json()
     self.assertEqual(base,old);self.assertEqual(base,invalid)
     for path in ['/series','/series/'+ident,'/api/entities/series','/api/entities/series/'+ident]:self.assertEqual((await client.get(path)).status_code,404)
