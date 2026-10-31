@@ -3528,7 +3528,7 @@ Apache License
 
 ### javdb-cover-bot genre glossary (adapted)
 
-Only the small generic nonempty genre mapping was adapted from src/jav321.js, repository HEAD e62f108 / observed source SHA256 4996fcf91fe8c35fa94c56cbe674361d95759d09cec456f04274f1e3e2a16ed5. No bot framework, actor renaming, tag suppression or image implementation is incorporated.
+Only the small generic nonempty genre mapping was adapted from src/jav321.js. No bot framework, actor renaming, tag suppression or image implementation is incorporated.
 
 ```text
 MIT License

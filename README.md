@@ -1,8 +1,13 @@
 # Sefang
 
-Sefang **3.0.1** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
+Sefang **3.0.2** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
 
 **Breaking change from 2.x: login is required.** Anonymous data/image/media APIs now return **401**; protected page requests redirect to `/login`. Public login assets and `/healthz` remain available. There is **no default administrator or password**. Without a locally initialized administrator, private data stays closed. Do not expose private channel material publicly. Telegram access alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no channel data, credentials, videos or photographs.
+
+## Changes in 3.0.2
+
+- Correct the ambiguous bare YUJ prefix in shared core 2026.10.31.1: `YUJ-038` now reaches the existing strict full-code metadata readers rather than an empty Korean-MIB route. Other MIB prefixes, filename recognition, same-work and cover policies are unchanged.
+- No website runtime, frontend, authentication, history, streaming or dependency upgrades are included. Preserve current data and configuration; no catalogue refresh is needed. This metadata repair does not fix or certify the unresolved iPhone playback symptom below.
 
 ## Changes in 3.0.1
 
@@ -44,7 +49,7 @@ npm --prefix frontend run build
 
 `frontend` builds into `src/sefang/static`. **After rebuilding the frontend, run `uv sync --reinstall-package sefang --locked --no-dev --no-editable`** so the installed package contains the rebuilt assets. Built assets are included for convenience and correspond to the included frontend source. Do not run the service from an editable development install for a release.
 
-Dependencies are pinned in `uv.lock` and `frontend/package-lock.json`. No global package modifications are required. A warm local dependency cache permits the same commands with `uv --offline` / `npm --offline`; a new machine normally needs public package-registry access. The small included `vendor/se_catalog_core-2026.10.25.1-py3-none-any.whl` is built from the accompanying `core/` source, not downloaded from a private registry.
+Dependencies are pinned in `uv.lock` and `frontend/package-lock.json`. No global package modifications are required. A warm local dependency cache permits the same commands with `uv --offline` / `npm --offline`; a new machine normally needs public package-registry access. The small included `vendor/se_catalog_core-2026.10.31.1-py3-none-any.whl` is built from the accompanying `core/` source, not downloaded from a private registry.
 
 ### Rebuild the shared core
 
@@ -55,7 +60,7 @@ uv lock --offline
 uv sync --locked --no-dev --no-editable --reinstall-package se-catalog-core
 ```
 
-Omit `--offline` on the first build if the pinned setuptools build dependency is not cached. The core version remains **2026.10.25.1**. Its code, orthographic rules and factual display-name mappings are included. `core/NOTICE.md` describes attribution and the omission of research-page quotations; factual names do not create identity aliases. `data/build.json` identifies the distributed name data; its source hash is SHA256 over sorted relative `se_catalog/*.py` paths, NUL, file bytes, NUL. The bundled wheel is rebuilt from this cleaned source with `SOURCE_DATE_EPOCH=0`; the pinned build tools reproduce it byte-for-byte under that setting. Rebuild without that setting and ZIP timestamps can differ; always inspect its contents and RECORD before updating the locked hash.
+Omit `--offline` on the first build if the pinned setuptools build dependency is not cached. The bundled core version is **2026.10.31.1**. Its code, orthographic rules and factual display-name mappings are included. `core/NOTICE.md` describes attribution and the omission of research-page quotations; factual names do not create identity aliases. `data/build.json` identifies the distributed name data; its source hash is SHA256 over sorted relative `se_catalog` Python/JSON paths (excluding `build.json`), NUL, file bytes, NUL. The bundled wheel is rebuilt from this cleaned source with `SOURCE_DATE_EPOCH=0`; the pinned build tools reproduce it byte-for-byte under that setting. Rebuild without that setting and ZIP timestamps can differ; always inspect its contents and RECORD before updating the locked hash.
 
 ## Runtime configuration
 

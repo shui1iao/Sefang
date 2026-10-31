@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.2 — 2026-10-31
+
+- Correct the ambiguous bare YUJ prefix in shared core 2026.10.31.1. YUJ-038 reaches existing strict full-code readers; other MIB prefixes, filename recognition, same-work and cover policies are unchanged. Add synthetic identity/route regressions.
+- No website runtime/frontend, dependency upgrade or data migration. Preserve configuration, accounts/history and caches. The unresolved iPhone audio/frozen-picture issue remains unconfirmed; this metadata fix does not address playback.
+
 ## 3.0.1 — 2026-10-31
 
 ### Streaming disconnect repair

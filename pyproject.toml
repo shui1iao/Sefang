@@ -3,12 +3,12 @@ requires=["setuptools==82.0.1"]
 build-backend="setuptools.build_meta"
 [project]
 name="sefang"
-version="3.0.1"
+version="3.0.2"
 description="Sefang read-only video library"
 requires-python=">=3.14"
 license="MIT"
 license-files=["LICENSE","NOTICE.md","THIRD-PARTY-NOTICES.md","licenses/*.txt"]
-dependencies=["se-catalog-core==2026.10.25.1","fastapi==0.143.2","uvicorn==0.54.0","httpx==0.28.1","telethon==1.45.0","pycryptodome==3.23.0","pillow==12.3.0","filelock==4.2.0","beautifulsoup4==4.15.0","numpy==2.4.4","opencv-python-headless==4.13.0.92","opencc-python-reimplemented==0.1.7"]
+dependencies=["se-catalog-core==2026.10.31.1","fastapi==0.143.2","uvicorn==0.54.0","httpx==0.28.1","telethon==1.45.0","pycryptodome==3.23.0","pillow==12.3.0","filelock==4.2.0","beautifulsoup4==4.15.0","numpy==2.4.4","opencv-python-headless==4.13.0.92","opencc-python-reimplemented==0.1.7"]
 [project.scripts]
 sefang="sefang.cli:main"
 [tool.setuptools.packages.find]
@@ -17,4 +17,4 @@ where=["src"]
 sefang=["static/**/*","static/*","category_policy.json"]
 
 [tool.uv.sources]
-se-catalog-core = {path = "vendor/se_catalog_core-2026.10.25.1-py3-none-any.whl"}
+se-catalog-core = {path = "vendor/se_catalog_core-2026.10.31.1-py3-none-any.whl"}

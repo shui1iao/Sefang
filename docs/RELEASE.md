@@ -1,8 +1,12 @@
-# Version 3.0.1 source release
+# Version 3.0.2 source release
 
-This source release includes the website, frontend source and unchanged 3.0.0 static assets, clean shared catalogue core 2026.10.25.1 source and its pinned wheel, generic deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
+This source release includes the website, frontend source and unchanged 3.0.0 static assets, clean shared catalogue core 2026.10.31.1 source and its pinned wheel, generic deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
 
 ## Patch scope
+
+Version 3.0.2 removes the ambiguous bare YUJ prefix from the Korean-MIB identity heuristic. YUJ-038 now reaches existing strict complete-code metadata readers; other MIB prefixes, filename recognition, same-work and cover policies remain unchanged. No website runtime/frontend or dependency upgrade is included. The following streaming repair from 3.0.1 remains intact; this metadata patch does not establish a fix for the iPhone playback issue.
+
+### Retained 3.0.1 streaming repair
 
 Abandoned stream requests are now observed while waiting for the media gate, Telegram message lookup or the opening media slice. Their preparation work is cancelled and awaited, and only their own transfer/gate is released. This prevents abandoned requests from filling the two-response cap and rejecting a new Range request with 429, without cancelling a still-connected sibling. The sole preparation receive reader discards unused GET/HEAD bodies without retaining payload chunks and is stopped before body streaming. Authentication, own-only history, window limits, aggregate rate limits, Range/body behavior, grouping and cache policy are unchanged. No temporary diagnostics are distributed.
 
@@ -22,10 +26,10 @@ For the prior 3.0.0 release, public-source checks used Python 3.14 and Node 24: 
 
 For 3.0.1, public-source verification runs the new real-TCP disconnect/memory regressions and existing auth/history/window/Range tests, plus an offline locked noneditable installation with installed-package byte checks. Fixtures are synthetic and local. Frontend/static assets have no delta from 3.0.0, so they are checked byte-for-byte without a frontend rebuild. These checks do not exercise real Telegram, a physical iPhone or long-duration playback.
 
-Core source, 144 factual name mappings/orthography data, category-policy cleaning, wheel bytes and dependency versions are unchanged from the clean public baseline. Static frontend assets retain the byte-identical reviewed 3.0.0 build corresponding to the unchanged frontend source, not an installation copy. Source licenses do not authorize redistribution of media or channel material.
+For 3.0.2, synthetic YUJ identity/route/reader/conflict regressions and existing catalogue regressions are checked, with offline locked noneditable archive installation and installed-byte verification. An internal replay of recorded public source responses validates both installed adapters without Telegram messages or production translation. Recordings are not distributed. Factual name/orthography data and category-policy cleaning are unchanged; the shared wheel retains complete project/third-party attribution and the minimal YUJ code change. No new physical-device or media validation is claimed. Static frontend assets retain the byte-identical reviewed 3.0.0 build corresponding to the unchanged frontend source, not an installation copy. Source licenses do not authorize redistribution of media or channel material.
 
 ## Distribution and licenses
 
-The two release attachments are `Sefang-v3.0.1-source.tar.gz` and `SHA256SUMS` (one checksum line for that tar). The archive has one `Sefang-v3.0.1/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
+The two release attachments are `Sefang-v3.0.2-source.tar.gz` and `SHA256SUMS` (one checksum line for that tar). The archive has one `Sefang-v3.0.2/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
 
 Sefang/core code: MIT with project attribution **Sefang authors**. Original third-party authors and complete license notices remain in LICENSE/NOTICE, THIRD-PARTY-NOTICES, core notices and licenses/. Media Chrome 4.19.4 MIT, ce-la-react 0.3.2 BSD-3-Clause and the SIL-OFL wordmark notices are retained. Code licensing grants no media, message, likeness or trademark rights.
