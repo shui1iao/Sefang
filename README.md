@@ -1,8 +1,14 @@
 # Sefang
 
-Sefang **3.0.0** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
+Sefang **3.0.1** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
 
 **Breaking change from 2.x: login is required.** Anonymous data/image/media APIs now return **401**; protected page requests redirect to `/login`. Public login assets and `/healthz` remain available. There is **no default administrator or password**. Without a locally initialized administrator, private data stays closed. Do not expose private channel material publicly. Telegram access alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no channel data, credentials, videos or photographs.
+
+## Changes in 3.0.1
+
+- Abandoned requests waiting for the media gate, Telegram message lookup or the opening slice now cancel and await their own preparation and release only their own transfer/gate. Stale requests no longer fill the two-response cap and reject a new Range request with 429; still-connected sibling responses remain independent.
+- A preparation-only disconnect reader discards unused GET/HEAD bodies without retaining chunks and stops before response-body handling. Login, own-only history, playback-window limits, aggregate rate limits and response-body streaming are unchanged. Frontend/static assets, core and dependencies are unchanged; temporary diagnostics are not distributed.
+- Synthetic real-TCP disconnect and memory regressions are included. This is not a physical-iPhone freeze certification.
 
 ## Changes in 3.0.0
 
@@ -16,7 +22,7 @@ Sefang **3.0.0** is a self-hosted video library for Telegram channels you are au
 
 ## Known playback issue
 
-**iPhone history resume may have continuous audio and an advancing clock while the video picture remains frozen. This is unresolved; the cause is not established.** Successful desktop/Chromium checks are not iOS certification, and no real iPhone/iOS playback verification is claimed for this release. The overlapping-Range and early-play fixes must not be read as a fix for this symptom. If affected, use the ordinary work entry and manually seek after playback starts; this is a reported workaround, not a guaranteed repair. No further freeze or unrelated legacy-bug fix is included.
+**iPhone ordinary playback/seek and history resume/seek may still have continuous audio and an advancing clock while the video picture remains frozen. This is unresolved; the cause is not established.** The preparation-disconnect repair has not been verified on a physical iPhone. Successful desktop/Chromium checks are not iOS certification, and no real iPhone/iOS playback verification is claimed for this release. Neither this repair nor the prior overlapping-Range/early-play repairs establish that the symptom is fixed. Ordinary playback followed by manual seeking is **not a reliable workaround**. No unrelated legacy-bug fix is included.
 
 See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md) for upgrade and verification boundaries.
 

@@ -7,9 +7,11 @@ client is still listening, and the playback slot is always given back.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import re
 
 from fastapi import APIRouter, HTTPException, Request
+from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 
 from .auth import COOKIE
@@ -69,6 +71,56 @@ def _refusal(error: BaseException) -> HTTPException:
     return HTTPException(410 if problem.gone else 503, str(problem), headers=headers)
 
 
+@asynccontextmanager
+async def _before_response(request: Request):
+    """Watch preparation only; retain no GET/HEAD body chunks.
+
+    This route and its response never consume a request body. Drain/discard it
+    instead of replaying payloads; only terminal disconnect needs remembering.
+    Stop and await the sole reader before handing receive back to the response.
+    """
+    receive = request.receive
+    disconnected = False
+
+    async def listen():
+        nonlocal disconnected
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                disconnected = True
+                raise ClientDisconnect()
+            # No body consumer on this GET/HEAD route. Do not even retain the
+            # last payload while awaiting the next message from a slow client.
+            del message
+
+    listener = asyncio.create_task(listen())
+
+    async def connected(awaitable):
+        work = asyncio.ensure_future(awaitable)
+        try:
+            done, _ = await asyncio.wait((work, listener), return_when=asyncio.FIRST_COMPLETED)
+            # A simultaneous disconnect wins, even if work just acquired a gate.
+            if listener in done:
+                listener.result()
+            return await work
+        finally:
+            if not work.done():
+                work.cancel()
+            await asyncio.gather(work, return_exceptions=True)
+
+    async def after_preparation():
+        if disconnected:
+            return {"type": "http.disconnect"}
+        return await receive()
+
+    try:
+        yield connected
+    finally:
+        listener.cancel()
+        await asyncio.gather(listener, return_exceptions=True)
+        request._receive = after_preparation
+
+
 @router.api_route("/api/videos/{channel_id}/{message_id}/stream", methods=["GET", "HEAD"])
 async def play(channel_id: int, message_id: int, request: Request):
     control = request.app.state.playbacks
@@ -101,29 +153,30 @@ async def play(channel_id: int, message_id: int, request: Request):
     try:
         if request.method != "HEAD":
             transfer = await control.claim(person, (channel_id, message_id), request.query_params.get("playback", ""))
-        try:
-            await control.wait(acquire_gate(), token, transfer, timeout=3)
-        except asyncio.TimeoutError:
-            raise HTTPException(429, "当前播放请求较多，请稍后重试", headers={"Retry-After": "3"}) from None
-        row, message = await control.wait(owner.locate(channel_id, message_id), token, transfer)
-        size = row["size"]
-        tag = f'"tg-{channel_id}-{message_id}-{row["document_id"]}"'
-        wanted = request.headers.get("range", "")
-        if request.headers.get("if-range") not in (None, tag):
-            wanted = ""
-        try:
-            first, last, status = pick_range(wanted, size)
-        except BadRange:
-            return Response(status_code=416, headers={"Content-Range": f"bytes */{size}", "Accept-Ranges": "bytes",
-                                                      "Cache-Control": "no-store"})
-        headers = {"Content-Length": str(max(0, last - first + 1)), "Accept-Ranges": "bytes", "ETag": tag,
-                   "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
-        if status == 206:
-            headers["Content-Range"] = f"bytes {first}-{last}/{size}"
-        if request.method == "HEAD" or size == 0:
-            return Response(status_code=status, headers=headers, media_type=row["mime"])
-        base = first - first % SLICE
-        opening = await control.wait(owner.slice_at(row, message, base), token, transfer)
+        async with _before_response(request) as connected:
+            try:
+                await connected(control.wait(acquire_gate(), token, transfer, timeout=3))
+            except asyncio.TimeoutError:
+                raise HTTPException(429, "当前播放请求较多，请稍后重试", headers={"Retry-After": "3"}) from None
+            row, message = await connected(control.wait(owner.locate(channel_id, message_id), token, transfer))
+            size = row["size"]
+            tag = f'"tg-{channel_id}-{message_id}-{row["document_id"]}"'
+            wanted = request.headers.get("range", "")
+            if request.headers.get("if-range") not in (None, tag):
+                wanted = ""
+            try:
+                first, last, status = pick_range(wanted, size)
+            except BadRange:
+                return Response(status_code=416, headers={"Content-Range": f"bytes */{size}", "Accept-Ranges": "bytes",
+                                                          "Cache-Control": "no-store"})
+            headers = {"Content-Length": str(max(0, last - first + 1)), "Accept-Ranges": "bytes", "ETag": tag,
+                       "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+            if status == 206:
+                headers["Content-Range"] = f"bytes {first}-{last}/{size}"
+            if request.method == "HEAD" or size == 0:
+                return Response(status_code=status, headers=headers, media_type=row["mime"])
+            base = first - first % SLICE
+            opening = await connected(control.wait(owner.slice_at(row, message, base), token, transfer))
 
         async def pump():
             at, start, chunk = first, base, opening
@@ -160,7 +213,7 @@ async def play(channel_id: int, message_id: int, request: Request):
                             return
                 watcher = asyncio.create_task(watch())
                 try:
-                    await super().__call__(scope, receive, send)
+                    await super().__call__(scope, request.receive, send)
                 finally:
                     watcher.cancel()
                     await asyncio.gather(watcher, return_exceptions=True)
@@ -168,6 +221,9 @@ async def play(channel_id: int, message_id: int, request: Request):
         response = AuthorizedStream(pump(), status_code=status, media_type=row["mime"], headers=headers, on_finish=finish)
         handed_over = True
         return response
+    except ClientDisconnect:
+        # The peer is gone; finish() still releases only this request's resources.
+        return Response(status_code=204)
     except HTTPException:
         raise
     except Exception as error:

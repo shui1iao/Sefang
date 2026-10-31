@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.1 — 2026-10-31
+
+### Streaming disconnect repair
+- Cancel and await only an abandoned request's preparation while it waits for the media gate, Telegram message lookup or the opening media slice. Release its transfer/gate independently so stale requests cannot occupy the two-response cap and reject a new Range request with 429. Connected sibling responses remain independent.
+- The preparation-only disconnect reader discards unused GET/HEAD request bodies without retaining chunks and stops before response-body handling. Login, own-only history, playback-window limits, aggregate rate limits, Range semantics and body streaming remain unchanged. Frontend/static assets, shared core and dependencies are unchanged; temporary diagnostics are not distributed.
+- Add synthetic real-TCP disconnect regressions, including cap recovery, sibling survival, cleanup races, revocation, timeout, HEAD/Range headers and bounded retained memory.
+
+### Known issue — not confirmed fixed
+- iPhone ordinary playback/seek **and** history resume/seek may still have audio with a frozen picture. This disconnect repair has not been verified on a physical iPhone and does not establish the cause of that symptom. Ordinary playback followed by manual seeking is **not a reliable workaround**. No real Telegram or long-duration playback certification is claimed.
+
 ## 3.0.0 — 2026-10-28
 
 ### Breaking upgrade
