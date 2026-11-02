@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.0 — 2026-11-02
+
+- Add a desktop-only (≥1024px) two-column Watch page: player/details left, single-column recommendations right; sidebar cards have a 16:10 cover left and title/cast/date right. Preserve narrow-screen and other-list layouts, links and the existing player.
+- Share a default maximum of eight recommendations across desktop/mobile. Target five same-cast, two same-type and one same-studio; type/studio slots prefer no shared reliable cast name. Use effective projected metadata, exclude the amateur placeholder from shared cast, and treat unknown cast as unverified rather than a certified different person.
+- Reserve overlapping type/studio candidates so feasible quotas survive, use each work once, exclude current/unavailable groups, then fill scarce slots by cast → type → studio → recent additions. Keep fillers in their display tier and series as an in-tier reference only. Return actual availability below eight; explicit limits preserve the default-eight prefix. Keep existing reason strings and response fields.
+- Add synthetic real-repository and authenticated ASGI count/quota/preference/overlap/scarcity/amateur/grouping/prefix tests. Build and lint the diagnostic-free public frontend; neutral Chromium layout checks do not certify real Telegram media or physical Safari/iOS. No dependency, core, authentication/history or streaming changes; no data migration.
+- The known iPhone audio/advancing-clock with frozen-picture issue remains unresolved. Ordinary playback followed by manual seek is not a reliable workaround; no media repair is claimed.
+
 ## 3.0.2 — 2026-10-31
 
 - Correct the ambiguous bare YUJ prefix in shared core 2026.10.31.1. YUJ-038 reaches existing strict full-code readers; other MIB prefixes, filename recognition, same-work and cover policies are unchanged. Add synthetic identity/route regressions.

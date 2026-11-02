@@ -1,8 +1,15 @@
 # Sefang
 
-Sefang **3.0.2** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
+Sefang **3.1.0** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
 
 **Breaking change from 2.x: login is required.** Anonymous data/image/media APIs now return **401**; protected page requests redirect to `/login`. Public login assets and `/healthz` remain available. There is **no default administrator or password**. Without a locally initialized administrator, private data stays closed. Do not expose private channel material publicly. Telegram access alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no channel data, credentials, videos or photographs.
+
+## Changes in 3.1.0
+
+- At viewport widths of **1024px or wider**, the Watch page keeps the player and details on the left and recommendations in one column on the right. Each sidebar card places its original 16:10 cover on the left and title, cast and date on the right. Narrower screens and other lists retain their existing layout.
+- Desktop and mobile share at most **8** recommendations: target **5 same-cast + 2 same-type + 1 same-studio**. Type/studio slots prefer works that do not share a reliable cast name with the current work. Effective projected tags define types; the amateur placeholder is not a shared actor. Unknown cast is not proof of a different identity.
+- Reserve feasible overlapping matches without repeating a work. If quotas are scarce, use overlapping cast/type/studio matches, then fill in cast → type → studio order and finally recent additions. Display fillers in their semantic tier; series is only an in-tier ordering reference, not a separate quota. Return fewer when fewer works are available; exclude the current and unavailable works. Explicit limits retain the same ordered prefix.
+- Player behavior, authentication/accounts, own-only history, streaming disconnect handling, shared core 2026.10.31.1, dependencies and existing name/category policies are unchanged. No migration or metadata reimport is required. Modern CSS-subgrid browsers are needed for horizontal sidebar cards; no physical Safari/iOS or real Telegram playback certification is claimed.
 
 ## Changes in 3.0.2
 

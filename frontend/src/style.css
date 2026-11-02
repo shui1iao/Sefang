@@ -1288,3 +1288,63 @@ h2 {
  .header-inner .account-actions { width:100%;justify-content:flex-end;order:3; }
  .header-inner nav { order:4; }
 }
+
+/* Desktop Watch only; narrow screens retain the existing document flow. */
+.watch-main {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .watch-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 25vw, 360px);
+    gap: 28px;
+    align-items: start;
+  }
+  .watch-layout > .related {
+    padding-top: 0;
+    min-width: 0;
+  }
+  .watch-layout > .related .video-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .watch-layout > .related .card {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 12px;
+    align-content: start;
+  }
+  .watch-layout > .related .card-link {
+    grid-column: 1 / -1;
+    grid-row: 1 / span 2;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-template-rows: subgrid;
+  }
+  .watch-layout > .related .card-link .art {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+  .watch-layout > .related .card-link h3 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0 0 6px;
+    min-height: 0;
+  }
+  .watch-layout > .related .card-meta {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 2px;
+    min-width: 0;
+  }
+  .watch-layout > .related .card-cast {
+    width: 100%;
+    max-width: 100%;
+  }
+}

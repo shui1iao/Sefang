@@ -55,6 +55,46 @@ def write_account(config, **extra):
 
 
 
+def related_mix_specs():
+    # Explicit synthetic identities with validated whole-field source provenance.
+    return [dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio", series="mix-series"),
+        *[dict(actor="mix_actor") for _ in range(9)],
+        dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio", series="mix-series"),
+        dict(actor="type_cast_a", tags=["mix-type"]),
+        dict(actor="type_cast_b", tags=["mix-type"]),
+        dict(actor="studio_cast", studio="mix-studio"),
+        dict(actor="other_cast"),
+        dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+        dict(actor="series_cast", series="mix-series")]
+
+
+def related_mix_pool(config, specs, gone=()):
+    index, repo = seed(config, len(specs))
+    with index.session() as db:
+        for mid, spec in enumerate(specs, 1):
+            code = f"IPX-{mid:03}"
+            fields = {"title": f"合成混排{mid}", "performers": [spec["actor"]] if spec.get("actor") else [],
+                "tags": spec.get("tags", []), "studio": spec.get("studio", ""),
+                "series": spec.get("series", ""), "field_sources": {"performers": "test"}}
+            sources = [{"name": "test", "url": f"https://example.test/{code}",
+                "returned_id": code, "fields": ["performers"]}]
+            db.execute("UPDATE tg_work SET metadata=?,sources=? WHERE identity=?",
+                (json.dumps(fields), json.dumps(sources), f"IPX-{mid}"))
+        db.execute("UPDATE tg_video SET date='2026-01-01T00:00:00+00:00'")
+    for mid in gone:
+        index.mark_gone(123, mid)
+    repo.refresh()
+    return index, repo
+
+
+def mix_result(repo, mid=1, limit=8):
+    result = repo.related(123, mid, limit=limit)
+    print(json.dumps({"related_mix": {"request": mid, "limit": limit, "basis": result["basis"],
+        "items": [{k: item[k] for k in ("id", "message_id", "related_reason", "entities", "part_count")} for item in result["items"]]}}, sort_keys=True))
+    return result
+
+
+
 class DataTests(unittest.TestCase):
     def test_search_filters_sort_related_and_unidentified(self):
         with tempfile.TemporaryDirectory() as d:
@@ -72,6 +112,182 @@ class DataTests(unittest.TestCase):
             self.assertEqual(4, repo.videos()["total"])
             self.assertEqual("unidentified", repo.dto(repo.raw(123, 4))["state"])
             repo.close()
+
+    def test_related_default_eight_preserves_order_exclusions_and_short_library(self):
+        for count, expected in ((15, 8), (3, 2), (1, 0)):
+            with self.subTest(count=count), tempfile.TemporaryDirectory() as d:
+                index, repo = seed(offline(Path(d)), count)
+                try:
+                    unavailable = None
+                    if count == 15:
+                        index.mark_gone(123, count)
+                        repo.refresh()
+                        unavailable = repo.snapshot().by_message[(123, count)].id
+                        self.assertFalse(repo.snapshot().by_message[(123, count)].available)
+                    current = repo.snapshot().by_message[(123, 1)].id
+                    default = repo.related(123, 1)
+                    old_limit = repo.related(123, 1, limit=12)
+                    ids = [item["id"] for item in default["items"]]
+                    self.assertEqual(expected, len(ids))
+                    self.assertEqual(default["items"], old_limit["items"][:8])
+                    self.assertEqual(default["basis"], old_limit["basis"])
+                    self.assertEqual(len(ids), len(set(ids)))
+                    self.assertNotIn(current, ids)
+                    if unavailable is not None:
+                        self.assertEqual(12, len(old_limit["items"]))
+                        self.assertNotIn(unavailable, [item["id"] for item in old_limit["items"]])
+                    print(json.dumps({"related_eight_repo": {"seed": count, "count": len(ids),
+                        "explicit_12_count": len(old_limit["items"]), "default_ids": ids,
+                        "explicit_12_ids": [item["id"] for item in old_limit["items"]],
+                        "order_and_DTO_equal_to_old_first_eight": True,
+                        "current_excluded": True, "unique": True,
+                        "unavailable_excluded": unavailable is not None}}, sort_keys=True))
+                finally:
+                    repo.close()
+
+
+    def test_related_mix_521_preference_DTO_order_and_stable_prefix(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, repo = related_mix_pool(offline(Path(d)), related_mix_specs(), gone=(16,))
+            try:
+                result = mix_result(repo)
+                mids = [i["message_id"] for i in result["items"]]
+                self.assertEqual([11, 10, 9, 8, 7, 13, 12, 14], mids)
+                self.assertEqual(5, sum("同演员" in i["related_reason"] for i in result["items"]))
+                self.assertTrue(all("同分类" in i["related_reason"] and "同演员" not in i["related_reason"] for i in result["items"][5:7]))
+                self.assertIn("同厂牌", result["items"][7]["related_reason"])
+                self.assertNotIn("同演员", result["items"][7]["related_reason"])
+                self.assertEqual("library_metadata", result["basis"])
+                for item in result["items"]:
+                    card = repo.card(repo.snapshot().by_id[item["id"]])
+                    self.assertEqual(card, {k: v for k, v in item.items() if k != "related_reason"})
+                self.assertEqual(result, repo.related(123, 1))
+                self.assertEqual(result["items"], repo.related(123, 1, 12)["items"][:8])
+                for limit in (0, 1, 5, 7):
+                    self.assertEqual(result["items"][:limit], repo.related(123, 1, limit)["items"])
+                snap = repo.snapshot()
+                with patch.object(repo, "snapshot", return_value=SimpleNamespace(groups=tuple(reversed(snap.groups)), by_message=snap.by_message)):
+                    self.assertEqual(result, repo.related(123, 1))
+            finally:
+                repo.close()
+
+
+    def test_related_mix_overlap_reserves_sole_studio_and_actor_type(self):
+        for overlap_actor in (False, True):
+            with self.subTest(overlap_actor=overlap_actor), tempfile.TemporaryDirectory() as d:
+                specs = related_mix_specs()
+                specs[13]["tags"] = ["mix-type"]  # top type is also the sole non-actor studio
+                if overlap_actor:
+                    specs[11]["actor"] = specs[12]["actor"] = "mix_actor"
+                    # All type alternatives are actors; reserve one instead of consuming it in actor5.
+                    specs[10].pop("studio")
+                _, repo = related_mix_pool(offline(Path(d)), specs, gone=(16,))
+                try:
+                    items = mix_result(repo)["items"]
+                    self.assertEqual([13, 12, 14], [i["message_id"] for i in items[5:]])
+                    self.assertEqual(8, len({i["id"] for i in items}))
+                    self.assertNotIn("同演员", items[7]["related_reason"])
+                    self.assertEqual(7 if overlap_actor else 5, sum("同演员" in i["related_reason"] for i in items))
+                    self.assertEqual(items, repo.related(123, 1, 12)["items"][:8])
+                finally:
+                    repo.close()
+
+
+    def test_related_mix_scarcity_fill_actor_then_type_then_studio(self):
+        cases = {
+            "type_short": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                *[dict(actor="mix_actor") for _ in range(8)], dict(actor="other", tags=["mix-type"]), dict(actor="maker", studio="mix-studio")],
+                [9, 8, 7, 6, 5, 4, 10, 11]),
+            "actor_absent": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                *[dict(actor=f"other{i}", tags=["mix-type"]) for i in range(3)],
+                *[dict(actor=f"maker{i}", studio="mix-studio") for i in range(3)], dict(actor="recent")],
+                [4, 3, 2, 7, 6, 5, 8]),
+            "type_absent": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                *[dict(actor="mix_actor") for _ in range(8)], dict(actor="maker", studio="mix-studio"), dict(actor="recent")],
+                [9, 8, 7, 6, 5, 4, 3, 10]),
+            "actor_short": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                dict(actor="mix_actor"), *[dict(actor=f"type{i}", tags=["mix-type"]) for i in range(4)],
+                *[dict(actor=f"maker{i}", studio="mix-studio") for i in range(3)], dict(actor="recent")],
+                [2, 6, 5, 4, 3, 9, 8, 7]),
+            "studio_short": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                *[dict(actor="mix_actor") for _ in range(8)],
+                dict(actor="type_a", tags=["mix-type"]), dict(actor="type_b", tags=["mix-type"]), dict(actor="recent")],
+                [9, 8, 7, 6, 5, 4, 11, 10]),
+            "reserved_actor_overlap": ([dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+                *[dict(actor="mix_actor") for _ in range(8)], dict(actor="mix_actor", tags=["mix-type"]),
+                dict(actor="mix_actor", studio="mix-studio"), dict(actor="recent")],
+                [9, 8, 7, 6, 5, 4, 10, 11]),
+        }
+        for name, (specs, expected) in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as d:
+                _, repo = related_mix_pool(offline(Path(d)), specs)
+                try:
+                    items = mix_result(repo)["items"]
+                    self.assertEqual(expected, [i["message_id"] for i in items])
+                    self.assertEqual(min(8, len(specs)-1), len(items))
+                    self.assertEqual(len(items), len({i["id"] for i in items}))
+                    self.assertEqual(set(expected), {i["message_id"] for i in items})
+                    self.assertEqual(items, repo.related(123, 1, 12)["items"][:8])
+                    for limit in (0,1,5,7):
+                        self.assertEqual(items[:limit], repo.related(123, 1, limit)["items"])
+                    self.assertEqual(items, repo.related(123, 1)["items"])
+                    snap = repo.snapshot()
+                    with patch.object(repo, "snapshot", return_value=SimpleNamespace(groups=tuple(reversed(snap.groups)), by_message=snap.by_message)):
+                        self.assertEqual(items, repo.related(123, 1)["items"])
+                    # Reserved actor/type and actor/studio overlaps must stay in their slots.
+                    if name == "reserved_actor_overlap":
+                        self.assertEqual([10,11], [i["message_id"] for i in items[-2:]])
+                        self.assertIn("同分类", items[-2]["related_reason"])
+                        self.assertIn("同厂牌", items[-1]["related_reason"])
+                    print(json.dumps({"related_scarcity": {"case": name, "expected_message_ids": expected,
+                        "message_ids": [i["message_id"] for i in items], "selected_set_unchanged": True,
+                        "fixed_eight_prefix": True, "stable_and_reversed_input": True}}, sort_keys=True))
+                finally:
+                    repo.close()
+
+
+    def test_related_mix_amateur_no_association_and_series_only_recent_fallback(self):
+        for series_only, amateur in ((False, False), (False, True), (True, True)):
+            with self.subTest(series_only=series_only, amateur=amateur), tempfile.TemporaryDirectory() as d:
+                specs = [dict(actor=None if amateur else f"unique{i}") for i in range(10)]
+                if series_only:
+                    specs[0]["series"] = specs[1]["series"] = "mix-series"
+                _, repo = related_mix_pool(offline(Path(d)), specs)
+                try:
+                    result = mix_result(repo)
+                    self.assertEqual(list(range(10, 2, -1)), [i["message_id"] for i in result["items"]])
+                    self.assertTrue(all(i["related_reason"] == "最近加入" for i in result["items"]))
+                    self.assertEqual("library_metadata" if series_only else "recent_fallback", result["basis"])
+                    self.assertEqual(result["items"], repo.related(123, 1, 12)["items"][:8])
+                    if series_only:
+                        self.assertEqual("同系列", repo.related(123, 1, 12)["items"][-1]["related_reason"])
+                finally:
+                    repo.close()
+
+
+    def test_related_mix_current_segments_alias_and_unavailable_group_unique(self):
+        with tempfile.TemporaryDirectory() as d:
+            index, repo = related_mix_pool(offline(Path(d)), related_mix_specs(), gone=(16,))
+            try:
+                for mid, name, document in ((2, "IPX-002(1).mp4", 902), (90, "IPX-002(1).mp4", 902),
+                        (91, "IPX-002(2).mp4", 991), (80, "IPX-001.mp4", 901)):
+                    index.store(123, [video_from_message(123, fake_message(mid, name=name, document=document, seconds=61 if mid==91 else (3 if mid==80 else 60)))])
+                repo.refresh();snap = repo.snapshot()
+                self.assertIs(snap.by_message[(123, 1)], snap.by_message[(123, 80)])
+                self.assertIs(snap.by_message[(123, 2)], snap.by_message[(123, 90)])
+                self.assertIs(snap.by_message[(123, 2)], snap.by_message[(123, 91)])
+                result = mix_result(repo, limit=50)
+                ids = [i["id"] for i in result["items"]]
+                self.assertEqual(len(ids), len(set(ids)))
+                self.assertNotIn(snap.by_message[(123, 1)].id, ids)
+                self.assertNotIn(snap.by_message[(123, 16)].id, ids)
+                self.assertEqual(1, ids.count(snap.by_message[(123, 2)].id))
+                self.assertEqual(2, next(i for i in result["items"] if i["id"]==snap.by_message[(123, 2)].id)["part_count"])
+                self.assertEqual(repo.related(123, 1), repo.related(123, 80))
+                self.assertEqual(result["items"][:8], repo.related(123, 1)["items"])
+            finally:
+                repo.close()
+
 
     def test_index_identifies_once_and_keeps_metadata_on_rewrite(self):
         with tempfile.TemporaryDirectory() as d:
@@ -155,6 +371,60 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         await self.client.aclose()
         await self.tg.stop()
         self.tmp.cleanup()
+
+    async def test_related_route_uses_real_repository_default_eight(self):
+        index, seeded = seed(self.config, 15)
+        seeded.close()
+        index.mark_gone(123, 15)
+        repo = self.app.state.repository
+        repo.refresh()
+        expected = repo.related(123, 1)
+        response = await self.client.get("/api/videos/123/1/related")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(expected, response.json())
+        self.assertEqual(8, len(response.json()["items"]))
+        self.assertEqual(repo.related(123, 1, limit=12)["items"][:8], response.json()["items"])
+        print(json.dumps({"related_eight_api": {"status": response.status_code,
+            "count": len(response.json()["items"]), "real_repository": True,
+            "route_without_limit": True, "same_DTO_and_order_as_old_first_eight": True,
+            "message_ids": [item["message_id"] for item in response.json()["items"]]}}, sort_keys=True))
+
+
+    async def test_related_route_real_521_mix_with_preferred_casts(self):
+        _, seeded = related_mix_pool(self.config, related_mix_specs(), gone=(16,))
+        seeded.close()
+        repo = self.app.state.repository
+        repo.refresh()
+        response = await self.client.get("/api/videos/123/1/related")
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual(repo.related(123, 1), result)
+        self.assertEqual([11, 10, 9, 8, 7, 13, 12, 14], [i["message_id"] for i in result["items"]])
+        self.assertEqual(5, sum("同演员" in i["related_reason"] for i in result["items"]))
+        self.assertEqual(result["items"], repo.related(123, 1, 12)["items"][:8])
+        print(json.dumps({"related_mix_api": {"status": response.status_code, "real_repo": True,
+            "actor_type_studio_slots": [5, 2, 1], "items": result["items"], "basis": result["basis"]}}, sort_keys=True))
+
+
+    async def test_related_route_real_scarcity_tier_order_and_prefix(self):
+        specs = [dict(actor="mix_actor", tags=["mix-type"], studio="mix-studio"),
+            *[dict(actor="mix_actor") for _ in range(8)], dict(actor="other", tags=["mix-type"]),
+            dict(actor="maker", studio="mix-studio")]
+        _, seeded = related_mix_pool(self.config, specs)
+        seeded.close();repo = self.app.state.repository;repo.refresh()
+        response = await self.client.get("/api/videos/123/1/related")
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual([9,8,7,6,5,4,10,11], [i["message_id"] for i in result["items"]])
+        self.assertEqual(repo.related(123, 1), result)
+        self.assertEqual(result["items"], repo.related(123, 1, 12)["items"][:8])
+        self.assertEqual("library_metadata", result["basis"])
+        self.assertTrue(all("同演员" in i["related_reason"] for i in result["items"][:6]))
+        self.assertEqual("同分类", result["items"][6]["related_reason"])
+        self.assertEqual("同厂牌", result["items"][7]["related_reason"])
+        print(json.dumps({"scarcity_order_api": {"status": response.status_code, "real_repo": True,
+            "items": result["items"], "basis": result["basis"], "fixed_eight_prefix": True}}, sort_keys=True))
+
 
     async def test_public_reads_hide_secrets_and_refuse_management_and_source(self):
         r = await self.client.get("/api/videos")

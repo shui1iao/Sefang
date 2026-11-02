@@ -456,7 +456,8 @@ function Watch() {
       {!valid ? (
         <Message title="观看地址无效" />
       ) : restoring || restoreRedirect ? <Loading /> : video && group ? (
-        <>
+        <div className="watch-layout">
+          <div className="watch-main">
           {multi || video.available ? (
             <Player
               key={group.id}
@@ -554,6 +555,7 @@ function Watch() {
               )}
             </div>
           </section>
+          </div>
           <section className="related" aria-label="相关推荐">
             <div className="section-title">
               <h2>相关推荐</h2>
@@ -566,7 +568,7 @@ function Watch() {
               <VideoGrid items={related.data?.items ?? []} />
             )}
           </section>
-        </>
+        </div>
       ) : data.loading ? (
         <div className="player-skeleton skeleton" />
       ) : data.error ? (

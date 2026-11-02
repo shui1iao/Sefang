@@ -303,20 +303,51 @@ class Repository:
   if filters or q:ordered=[g for g in ordered if self._matches(g,filters,q)]
   total=len(ordered)
   return {'items':[self.card(g) for g in ordered[(page-1)*limit:page*limit]],'total':total,'page':page,'pages':(total+limit-1)//limit}
- def related(self,cid,mid,limit=12):
+ def related(self,cid,mid,limit=8):
   if cid not in self.config.channels or not 0<mid<2**53:return None
   snap=self.snapshot();current=snap.by_message.get((cid,mid))
   if current is None:return None
-  fields=self.effective(current);ranked=[]
+  fields=self.effective(current);ranked=[];seen={current.id}
   for group in snap.groups:
-   if group is current or not group.available:continue
-   other=self.effective(group);score=0;reasons=[]
-   for key,weight,label in [('performers',8,'同演员'),('series',6,'同系列'),('studio',3,'同厂牌'),('tags',1,'同分类')]:
-    a=fields.get(key);b=other.get(key)
-    shared_names=set(a or [])&set(b or [])
-    if key=='performers':shared_names.discard(AMATEUR)  # A shared fallback is not a shared person.
-    shared=bool(shared_names)
-    if shared:score+=weight;reasons.append(label)
-   ranked.append((score,max(str(r['date']) for r in group.parts),max(r['message_id'] for r in group.parts),group,reasons))
-  ranked.sort(key=lambda r:r[:3],reverse=True)
-  return {'items':[{**self.card(g),'related_reason':' · '.join(reasons) if score else '最近加入'} for score,_,__,g,reasons in ranked[:limit]],'basis':'library_metadata' if any(r[0] for r in ranked) else 'recent_fallback'}
+   if group.id in seen or not group.available:continue
+   seen.add(group.id);other=self.effective(group);matches=[]
+   for key in ('performers','tags','studio','series'):
+    shared=set(fields.get(key) or ())&set(other.get(key) or ())
+    if key=='performers':shared.discard(AMATEUR)
+    matches.append(bool(shared))
+   ranked.append((tuple(matches),max(str(r['date']) for r in group.parts),max(r['message_id'] for r in group.parts),group))
+  # Semantic rank first; series is only an in-tier reference, never a quota.
+  # Unrelated (including series-only) fallback keeps the original date/id order.
+  ranked.sort(key=lambda r:(r[0][:3],r[0][3] if any(r[0][:3]) else False,r[1],r[2],r[3].id),reverse=True)
+  # Exactly 5/2/1 slots: only 6*3*2=36 local reservation states. Retaining
+  # alternatives prevents a type/studio overlap from consuming the sole maker.
+  # Among feasible quotas prefer non-shared casts, not asserted identities.
+  def preference(picks):
+   preferred=[sum(not ranked[i][0][0] for i in bucket) for bucket in picks[1:]]
+   return (sum(preferred),preferred[0],tuple(tuple(-i for i in bucket) for bucket in picks))
+  states={(0,0,0):((),(),())}
+  for i,row in enumerate(ranked):
+   updated=dict(states)
+   for counts,picks in states.items():
+    for tier,quota in enumerate((5,2,1)):
+     if not row[0][tier] or counts[tier]>=quota:continue
+     key=tuple(n+(j==tier) for j,n in enumerate(counts))
+     value=tuple(bucket+(i,) if j==tier else bucket for j,bucket in enumerate(picks))
+     if key not in updated or preference(value)>preference(updated[key]):updated[key]=value
+   states=updated
+  # Scarce quotas retain actor -> type -> studio priority. Remaining available
+  # groups then fill in that order, with date/id-only recent fallback last.
+  picks=states[max(states)];ordered=[i for bucket in picks for i in bucket];used=set(ordered)
+  remaining=[i for i in range(len(ranked)) if i not in used]
+  fill=remaining[:max(0,8-len(ordered))]
+  # Fix the default-eight set first. Keep reserved overlap slots, but put each
+  # filler back into its actor/type/studio/recent display tier before slicing.
+  tiers={i:tier for tier,bucket in enumerate(picks) for i in bucket}
+  for i in fill:tiers[i]=next((tier for tier in range(3) if ranked[i][0][tier]),3)
+  ordered=sorted(ordered+fill,key=lambda i:(tiers[i],i))+remaining[len(fill):]
+  items=[]
+  for i in ordered[:limit]:
+   matches,_,__,group=ranked[i]
+   reasons=[label for match,label in zip((matches[0],matches[3],matches[2],matches[1]),('同演员','同系列','同厂牌','同分类')) if match]
+   items.append({**self.card(group),'related_reason':' · '.join(reasons) if reasons else '最近加入'})
+  return {'items':items,'basis':'library_metadata' if any(any(r[0]) for r in ranked) else 'recent_fallback'}

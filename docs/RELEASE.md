@@ -1,8 +1,18 @@
-# Version 3.0.2 source release
+# Version 3.1.0 source release
 
-This source release includes the website, frontend source and unchanged 3.0.0 static assets, clean shared catalogue core 2026.10.31.1 source and its pinned wheel, generic deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
+This source release includes the website, frontend source and rebuilt diagnostic-free 3.1.0 static assets, clean shared catalogue core 2026.10.31.1 source and its pinned wheel, generic deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
 
-## Patch scope
+## 3.1.0 feature scope
+
+This backward-compatible minor release adds desktop Watch columns at ≥1024px and horizontal recommendation cards within that sidebar only. The original player/details stay together; below 1024px and on other lists the old geometry is preserved. Horizontal cards use CSS subgrid (modern Chrome, Firefox and Safari); no physical Safari/iOS test is claimed.
+
+The common API defaults to at most eight works: five shared reliable cast, two shared effective type tags and one shared studio. Type/studio quotas prefer no shared reliable cast name; unknown cast does not establish another identity and the amateur placeholder never counts as a shared actor. Reserve feasible overlapping slots without duplicate works; allow matching cast overlap when necessary, then fill by cast, type, studio and finally recent additions. Fillers return to their display tier, while overlap works selected for type/studio keep that slot. Series is only an in-tier reference; original date/message ordering resolves the remaining ties. Exclude current/unavailable groups and return actual availability below eight. Default eight and smaller/explicit larger limits share a fixed ordered prefix. Response fields and truthful reason strings remain compatible.
+
+Public-source verification uses isolated synthetic databases with the real repository and authenticated ASGI route for default count, 5/2/1 quotas, non-shared-cast preference, overlapping reservation, scarce-tier display order, amateur/series-only fallback, grouping/exclusions, insufficient libraries and stable explicit-limit prefixes. Selected existing metadata/caption/amateur/auth regressions, TypeScript/Vite build, lint, and 1440/390 neutral Chromium layout smoke support this release; the final archive is installed offline with locked noneditable byte checks. These are not production-account, real Telegram, physical Safari/iOS or long-media certification. No playback repair is claimed.
+
+Authentication/accounts/own-only history, the streaming disconnect/preheader repair and clean shared core 2026.10.31.1 (including its wheel, policies, data and licenses) are retained byte-for-byte. Dependency versions are unchanged except this project's version. No catalogue refresh, schema change, reimport or initialization is needed.
+
+## Retained 3.0.2 patch scope
 
 Version 3.0.2 removes the ambiguous bare YUJ prefix from the Korean-MIB identity heuristic. YUJ-038 now reaches existing strict complete-code metadata readers; other MIB prefixes, filename recognition, same-work and cover policies remain unchanged. No website runtime/frontend or dependency upgrade is included. The following streaming repair from 3.0.1 remains intact; this metadata patch does not establish a fix for the iPhone playback issue.
 
@@ -30,6 +40,6 @@ For 3.0.2, synthetic YUJ identity/route/reader/conflict regressions and existing
 
 ## Distribution and licenses
 
-The two release attachments are `Sefang-v3.0.2-source.tar.gz` and `SHA256SUMS` (one checksum line for that tar). The archive has one `Sefang-v3.0.2/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
+The two release attachments are `Sefang-v3.1.0-source.tar.gz` and `SHA256SUMS` (one checksum line for that tar). The archive has one `Sefang-v3.1.0/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
 
 Sefang/core code: MIT with project attribution **Sefang authors**. Original third-party authors and complete license notices remain in LICENSE/NOTICE, THIRD-PARTY-NOTICES, core notices and licenses/. Media Chrome 4.19.4 MIT, ce-la-react 0.3.2 BSD-3-Clause and the SIL-OFL wordmark notices are retained. Code licensing grants no media, message, likeness or trademark rights.
