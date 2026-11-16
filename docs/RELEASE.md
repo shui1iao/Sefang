@@ -1,8 +1,8 @@
-# Version 3.1.0 source release
+# Version 3.2.0 release
 
-This source release includes the website, frontend source and rebuilt diagnostic-free 3.1.0 static assets, clean shared catalogue core 2026.10.31.1 source and its pinned wheel, generic deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
+This release switches Sefang to pure Docker Compose deployment (`Dockerfile`, `docker-compose.yml`, `.dockerignore` and GHCR image publishing) and updates `grouping.py` to recognize numeric part markers before edition suffixes (`-1-C.mp4` / `-2-C.mp4`) and exclude unavailable messages from public group projection. It includes the website, frontend source and diagnostic-free static assets, clean shared catalogue core 2026.10.31.1 source and its pinned wheel, generic Docker deployment examples and synthetic tests. No real channel data, credentials, session, installation-specific role/alias lists, temporary phone diagnostics or deployment records are distributed.
 
-## 3.1.0 feature scope
+## Retained 3.1.0 feature scope
 
 This backward-compatible minor release adds desktop Watch columns at ≥1024px and horizontal recommendation cards within that sidebar only. The original player/details stay together; below 1024px and on other lists the old geometry is preserved. Horizontal cards use CSS subgrid (modern Chrome, Firefox and Safari); no physical Safari/iOS test is claimed.
 
@@ -40,6 +40,6 @@ For 3.0.2, synthetic YUJ identity/route/reader/conflict regressions and existing
 
 ## Distribution and licenses
 
-The two release attachments are `Sefang-v3.1.0-source.tar.gz` and `SHA256SUMS` (one checksum line for that tar). The archive has one `Sefang-v3.1.0/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
+The release attachments are `Sefang-v3.2.0-source.tar.gz`, `docker-compose.yml` and `SHA256SUMS`. The archive has one `Sefang-v3.2.0/` prefix and the exact reviewed public Git file set. It excludes Git metadata, environments, dependency directories, caches, runtime state, internal manifests, reports and credentials. Files are normalized to 0644 with zero ownership/timestamps, USTAR without PAX/links, and gzip without a filename/time; repeated generation is byte-identical.
 
 Sefang/core code: MIT with project attribution **Sefang authors**. Original third-party authors and complete license notices remain in LICENSE/NOTICE, THIRD-PARTY-NOTICES, core notices and licenses/. Media Chrome 4.19.4 MIT, ce-la-react 0.3.2 BSD-3-Clause and the SIL-OFL wordmark notices are retained. Code licensing grants no media, message, likeness or trademark rights.

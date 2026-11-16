@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0 — 2026-11-16
+
+- Switch to pure Docker Compose deployment (`Dockerfile`, `docker-compose.yml`, `.dockerignore` and GHCR workflow `ghcr.io/shui1iao/sefang`); remove host systemd unit files.
+- Recognize explicit numeric part markers before edition suffixes (such as `-1-C.mp4` / `-2-C.mp4`) in `grouping.py` while keeping strict base-filename, edition and container checks.
+- Exclude unavailable messages from public group projection and entity counts in `GroupIndex.update` while retaining legacy detail lookups.
+
 ## 3.1.0 — 2026-11-02
 
 - Add a desktop-only (≥1024px) two-column Watch page: player/details left, single-column recommendations right; sidebar cards have a 16:10 cover left and title/cast/date right. Preserve narrow-screen and other-list layouts, links and the existing player.

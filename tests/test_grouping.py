@@ -45,10 +45,9 @@ class IncrementalTests(unittest.TestCase):
   self.assertEqual(1,len(self.repo.snapshot().by_message[(123,1)].parts));self.assertEqual(6,len(self.cards()))
   self.assertEqual(3,self.repo.entity('actors',entity_id('actors','甲'))['count'])
   part(self.store,6,'IPX-001(3).mp4',200);self.repo.refresh();self.assertEqual(4,len(self.cards()))
-  # 删除一段：保留组与原地址，合计只计已知可用段并标未完整。
-  self.store.mark_gone(123,2);self.repo.refresh();g=self.repo.snapshot().by_message[(123,2)]
-  self.assertEqual(3,len(g.parts));self.assertFalse(g.duration_complete);self.assertAlmostEqual(800.25,g.total_duration)
-  detail=self.repo.detail(123,2)['group'];self.assertEqual(1,detail['index']);self.assertFalse(detail['parts'][1]['available'])
+  # 删除一段：不可用段退出公开分组，原地址单消息详情仍保留不可用提示。
+  self.store.mark_gone(123,2);self.repo.refresh();self.assertNotIn((123,2),self.repo.snapshot().by_message)
+  detail=self.repo.detail(123,2);self.assertFalse(detail['available']);self.assertEqual(1,detail['group']['part_count'])
  def test_group_id_stable_across_new_segment(self):
   first=self.repo.snapshot().by_message[(123,1)].id
   part(self.store,6,'IPX-001(3).mp4',200);self.repo.refresh();self.assertEqual(first,self.repo.snapshot().by_message[(123,6)].id)
@@ -124,12 +123,19 @@ class StrictAliasTests(unittest.TestCase):
   a=self.row(1,'ABC-123(1).mp4');b=self.row(2,'ABC-123(2).mp4',duration=200.25);other=self.row(10,'ABC-124.mp4',code='ABC-124',identity='ABC-124')
   index=self.project([a,b,other]);old=index.snapshot;stable=old.by_message[(123,1)].id;before=index.recomputed_buckets
   alias={**a,'message_id':3,'document_id':'9003'};self.assertEqual(1,len(index.update([a,b,alias,other])));self.assertEqual(before+1,index.recomputed_buckets)
-  unavailable={**a,'available':0};index.update([unavailable,b,alias,other]);g=index.snapshot.by_message[(123,1)]
-  self.assertEqual(stable,g.id);self.assertEqual([3,2],[r['message_id'] for r in g.parts]);self.assertEqual(0,g.index_of(123,1));self.assertTrue(g.duration_complete)
+  unavailable={**a,'available':0};index.update([unavailable,b,alias,other]);g=index.snapshot.by_message[(123,3)]
+  self.assertNotIn((123,1),index.snapshot.by_message);self.assertEqual(stable,g.id);self.assertEqual([3,2],[r['message_id'] for r in g.parts]);self.assertTrue(g.duration_complete)
   self.assertEqual([1,2],[r['message_id'] for r in old.by_message[(123,1)].parts])
-  index.update([unavailable,b,other]);g=index.snapshot.by_message[(123,1)];self.assertNotIn((123,3),index.snapshot.by_message);self.assertFalse(g.duration_complete);self.assertEqual(200.25,g.total_duration)
+  index.update([unavailable,b,other]);g=index.snapshot.by_message[(123,2)];self.assertNotIn((123,3),index.snapshot.by_message);self.assertEqual('single',g.status);self.assertEqual(200.25,g.total_duration)
   edited={**a,'title':'ABC-123(4).mp4'};index.update([edited,b,other]);self.assertEqual(3,len(index.snapshot.groups));self.assertEqual('unresolved',index.snapshot.by_message[(123,1)].status)
   index.update([a,b,other]);self.assertEqual(stable,index.snapshot.by_message[(123,1)].id)
+ def test_part_before_edition_suffix_and_unavailable_exclusion(self):
+  p1=self.row(1,'FC2PPV-4558488-1-C.mp4',code='FC2-PPV-4558488',identity='FC2-4558488')
+  p2=self.row(2,'FC2PPV-4558488-2-C.mp4',code='FC2-PPV-4558488',identity='FC2-4558488',size=987654321,duration=200.25)
+  gone={**p1,'message_id':99,'document_id':'9099','available':0,'duration':111.0}
+  snap=self.project([gone,p1,p2]).snapshot;self.assertEqual(1,len(snap.groups));g=snap.groups[0]
+  self.assertEqual('confirmed',g.status);self.assertEqual((1,2),g.numbers);self.assertEqual([1,2],[r['message_id'] for r in g.parts])
+  self.assertNotIn((123,99),snap.by_message)
 
 class AliasRepositoryTests(unittest.IsolatedAsyncioTestCase):
  async def asyncSetUp(self):
@@ -153,8 +159,9 @@ class AliasRepositoryTests(unittest.IsolatedAsyncioTestCase):
   for kind,ident in [('categories',category),('actors',actor),('studios',studio)]:self.assertEqual(1,self.repo.entity(kind,ident)['count'])
   related=(await self.client.get('/api/videos/123/3/related')).json()['items'];ids=[v['id'] for v in related];self.assertNotIn(g.id,ids);self.assertEqual(len(ids),len(set(ids)))
  async def test_available_alias_preserves_requested_unavailable_message(self):
-  self.store.mark_gone(123,2);self.repo.refresh();g=self.repo.snapshot().by_message[(123,2)];self.assertEqual([1,3],[r['message_id'] for r in g.parts])
+  self.store.mark_gone(123,2);self.repo.refresh();self.assertNotIn((123,2),self.repo.snapshot().by_message)
+  g=self.repo.snapshot().by_message[(123,3)];self.assertEqual([1,3],[r['message_id'] for r in g.parts])
   unavailable=(await self.client.get('/api/videos/123/2')).json();available=(await self.client.get('/api/videos/123/3')).json()
-  self.assertFalse(unavailable['available']);self.assertFalse(unavailable['group']['parts'][1]['available']);self.assertEqual(2,unavailable['group']['parts'][1]['message_id']);self.assertTrue(available['group']['parts'][1]['available']);self.assertTrue(g.duration_complete);self.assertEqual(900.75,g.total_duration)
+  self.assertFalse(unavailable['available']);self.assertFalse(unavailable['group']['parts'][0]['available']);self.assertEqual(2,unavailable['group']['parts'][0]['message_id']);self.assertTrue(available['group']['parts'][1]['available']);self.assertTrue(g.duration_complete);self.assertEqual(900.75,g.total_duration)
 
 if __name__=='__main__':unittest.main()

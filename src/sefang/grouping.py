@@ -13,6 +13,7 @@ from .tg.index import PLAYABLE_MIME
 
 RULE_VERSION=3
 PAREN=re.compile(r'[（(]\s*(0?[1-9]|[1-9]\d)\s*[）)](?=\.[a-z0-9]{2,4}$)',re.I)
+PART_BEFORE_EDITION=re.compile(r'(?:^|[^a-z0-9]|(?<=\d)(?=[a-h]\.|part|pt|cd|disc|disk|dvd|vol))(?:part|pt|cd|disc|disk|dvd|vol|fhd)?[-_ ]?(0?[1-9]|[1-9]\d)(?=[-_.\s]+(?:ch|sub|uc|fhd|4k|hd|c|u)\.[a-z0-9]{2,4}$)',re.I)
 CIRCLED='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'
 TECH=[('1080p',r'(?i)(?<!\d)1080p?\b'),('720p',r'(?i)(?<!\d)720p?\b'),('2160p',r'(?i)(?<!\d)2160p?\b'),
       ('4k',r'(?i)(?<![a-z0-9])4k(?![a-z0-9])'),('8k',r'(?i)(?<![a-z0-9])8k(?![a-z0-9])'),('hevc',r'(?i)hevc|h\.?265|x265'),
@@ -22,7 +23,10 @@ CONFIRMED_EVIDENCE=('same_channel_identity','explicit_part_numbers_1_to_n','same
 def segment_mark(row):
  """返回(显式段号, 去段号基名)；段号必须是独立尾缀且余下基名仍确认同一番号。"""
  title=str(row.get('title') or '');m=PAREN.search(title);paren=bool(m)
- if not m:m=codes.part_suffix(title)
+ if not m:
+  m=codes.part_suffix(title)
+  if m and m.group(1) not in CIRCLED and not m.group(1).isdigit():m=None
+ if not m:m=PART_BEFORE_EDITION.search(title)
  if not m:return None
  token=m.group(1)
  if token in CIRCLED:token=str(CIRCLED.index(token)+1)
@@ -172,7 +176,9 @@ class GroupIndex:
   self.snapshot=Snapshot(0,(),{});self.recomputed_buckets=0
  def update(self,rows):
   with self.lock:
-   incoming={(r['channel_id'],r['message_id']):r for r in rows};affected=set()
+   # Only available messages participate in public groups, aliases and counts.
+   # Raw legacy lookups remain in Repository; removed keys still invalidate buckets.
+   incoming={(r['channel_id'],r['message_id']):r for r in rows if r.get('available')};affected=set()
    for key,row in incoming.items():
     old=self.rows.get(key)
     if old!=row:

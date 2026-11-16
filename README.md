@@ -1,8 +1,13 @@
 # Sefang
 
-Sefang **3.1.0** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
+Sefang **3.2.0** is a self-hosted video library for Telegram channels you are authorized to access and share. React/Vite provides browsing, search, directories and standalone controls around one native video element; FastAPI provides grouped multipart playback and HTTP Range reads through one Telethon session owner. Media access is read-only: there is no upload or message-edit endpoint. Account management, playback leases and personal history have explicit authenticated write APIs.
 
 **Breaking change from 2.x: login is required.** Anonymous data/image/media APIs now return **401**; protected page requests redirect to `/login`. Public login assets and `/healthz` remain available. There is **no default administrator or password**. Without a locally initialized administrator, private data stays closed. Do not expose private channel material publicly. Telegram access alone does not grant redistribution rights. Respect copyright, privacy, consent, platform rules and local law. This repository contains no channel data, credentials, videos or photographs.
+
+## Changes in 3.2.0
+
+- **Pure Docker Compose deployment**: ship a self-contained `Dockerfile` (`python:3.14-slim-bookworm` + locked `uv` environment), `docker-compose.yml`, `.dockerignore` and GHCR image publishing workflow (`ghcr.io/shui1iao/sefang`). Host-specific systemd unit files are removed.
+- **Multipart & unavailable projection repair**: recognize explicit numeric part markers placed immediately before edition suffixes (such as `-1-C.mp4` / `-2-C.mp4`) while preserving strict base-filename, edition and container verification; exclude unavailable messages from public group projection and entity counts so deleted messages no longer leave stale cards or block valid multipart grouping.
 
 ## Changes in 3.1.0
 
@@ -40,11 +45,23 @@ See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md) for upgr
 
 ## Requirements
 
-- Python **3.14 or newer**, `uv`, Node.js **22.12+** (or 20.19+) and npm.
+- Docker and Docker Compose (recommended pure Docker deployment), or Python **3.14+**, `uv`, Node.js **22.12+** and npm for local source builds.
 - A legal Telegram user account, your own API application credentials, an already-authorized Telethon StringSession and an explicit allowlist of channels. The site **does not perform Telegram login** (web-account login is separate). Obtain credentials and a session separately using Telegram/Telethon's documented process; never send them to a repository or issue tracker.
 - Sufficient local storage for metadata and bounded caches. Slice cache and catalogue covers are each capped at **512 MiB**; actor portraits are capped at 64 MiB total, 2 MiB each and 512 files. These are caches, not an archival copy of a channel.
 
-## Install and build
+## Docker deployment (recommended)
+
+```sh
+umask 077
+mkdir -p data/data/secrets/telegram data/state
+cp deploy/sefang.env.example .env
+# Edit .env and data/data/secrets/telegram/account.json before starting online mode.
+docker compose up -d
+# Initialize the administrator account inside the container (prompts twice without echo):
+docker exec -it sefang sefang init-admin --username library_admin --max-playbacks 2
+```
+
+## Source build (optional)
 
 From any new checkout directory (all commands here are relative to the checkout):
 
@@ -119,7 +136,7 @@ For an authorized online instance, create a private JSON file at `$SEFANG_DATA_R
 
 The index is generated below `data/database`, covers/slices below `data/generated`, and the derived entity/localization state below `SEFANG_STATE_ROOT`. Missing metadata does not block browsing. Telegram new/edit/delete events update the local index; the site does not edit Telegram messages. Protected media is streamed without persisting video slices. Catalogue/portrait and title-translation workers can contact public metadata sources; these are not part of the offline installation check. Use only where authorized and observe upstream terms/rate limits. Translation requests may disclose title text to the configured public translation endpoints; use disconnected mode if external requests are not acceptable.
 
-`deploy/sefang.env.example` and `deploy/sefang.service` are optional **generic** Linux/systemd examples. Adapt all paths and the `sefang` service user to your machine, create that user and private directories first, then install the unit yourself. Nothing in this repository automatically changes services or configures a reverse proxy.
+`deploy/sefang.env.example` and `docker-compose.yml` provide the standard pure Docker deployment configuration. Nothing in this repository automatically configures a reverse proxy.
 
 ### Optional local roles and actor aliases
 

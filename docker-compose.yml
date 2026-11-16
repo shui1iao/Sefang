@@ -1,0 +1,24 @@
+name: sefang
+
+services:
+  sefang:
+    image: ghcr.io/shui1iao/sefang:latest
+    build: .
+    container_name: sefang
+    restart: unless-stopped
+    init: true
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      SEFANG_DATA_ROOT: /data/data
+      SEFANG_STATE_ROOT: /data/state
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:18943/healthz', timeout=5); assert r.status == 200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
