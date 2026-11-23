@@ -4,6 +4,7 @@ import {labels,type Kind} from './navigation';
 import {displayName,nameHint} from './display';
 import {facetItems,type FacetEntity} from './facet-model';
 import {SORT_FIELDS,decodeSort,encodeSort,type SortField,type SortDirection} from './sort-model';
+import {Icon} from './components';
 
 type EntityPage={items:FacetEntity[];total:number;page:number;pages:number};
 async function readJson<T>(url:string,signal:AbortSignal):Promise<T>{
@@ -57,7 +58,7 @@ function useSelected(kind:Kind,value:string){
 }
 function restoreTrigger(event:Event,trigger:RefObject<HTMLButtonElement|null>){event.preventDefault();trigger.current?.focus({preventScroll:true})}
 function Chevron(){return <svg className="picker-chevron" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m4 6 4 4 4-4"/></svg>}
-function Check(){return <span className="picker-check" aria-hidden="true">✓</span>}
+export function Check(){return <svg className="picker-check" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>}
 export function FacetStrip({kind,value,onChange}:{kind:Kind;value:string;onChange:(value:string)=>void}){
  const [requested,setRequested]=useState(false),[expanded,setExpanded]=useState(false),[query,setQuery]=useState('');
  const catalog=useCatalog(kind,requested),selected=useSelected(kind,value),label=labels[kind],id=useId();
@@ -68,12 +69,12 @@ export function FacetStrip({kind,value,onChange}:{kind:Kind;value:string;onChang
  useEffect(()=>{const node=selectedButton.current,parent=node?.parentElement;if(!node||!parent||expanded)return;const box=node.getBoundingClientRect(),row=parent.getBoundingClientRect();if(box.left<row.left||box.right>row.right)parent.scrollLeft+=box.left-row.left-2},[value,current?.id,catalog.items.length,expanded]);
  return <section className="facet-section" data-facet={kind} aria-label={'按'+label+'筛选'}>
   <div className="facet-heading"><div className="facet-label"><strong>选择{label}</strong></div>
-   <div className="facet-search"><input aria-label={'搜索'+label+'名称'} placeholder={'搜索'+label+' / 原名'} maxLength={200} value={query} onFocus={()=>setRequested(true)} onChange={e=>{setRequested(true);setQuery(e.target.value)}}/>{query&&<button type="button" aria-label={'清空'+label+'搜索'} onClick={()=>setQuery('')}>×</button>}</div>
+   <div className="facet-search"><Icon name="search"/><input aria-label={'搜索'+label+'名称'} placeholder={'搜索'+label+' / 原名'} maxLength={200} enterKeyHint="search" value={query} onFocus={()=>setRequested(true)} onChange={e=>{setRequested(true);setQuery(e.target.value)}}/>{query&&<button type="button" aria-label={'清空'+label+'搜索'} onClick={()=>setQuery('')}><Icon name="close"/></button>}</div>
    <button className="quiet facet-expand" type="button" aria-expanded={expanded} aria-controls={id} onClick={()=>{setRequested(true);setExpanded(v=>!v)}}>{expanded?'收起'+label:'展开全部'+label}</button>
   </div>
   <div id={id} className={'facet-strip'+(expanded?' expanded':'')} role="group" aria-label={label+'选项'} onScroll={()=>setRequested(true)}>
    <button type="button" className={'facet-choice'+(!value?' selected':'')} aria-pressed={!value} data-entity-option="" onClick={()=>onChange('')}>全部{label}</button>
-   {matches.map(entity=><button type="button" ref={selectedId===entity.id?selectedButton:undefined} key={entity.id} data-entity-option={entity.id} className={'facet-choice'+(selectedId===entity.id?' selected':'')} aria-pressed={selectedId===entity.id} title={nameHint(entity)} onClick={()=>onChange(entity.id)}>{displayName(entity)}<small>{entity.count}</small></button>)}
+   {matches.map(entity=><button type="button" ref={selectedId===entity.id?selectedButton:undefined} key={entity.id} data-entity-option={entity.id} className={'facet-choice'+(selectedId===entity.id?' selected':'')} aria-pressed={selectedId===entity.id} title={nameHint(entity)} onClick={()=>onChange(entity.id)}><span className="facet-name">{displayName(entity)}</span><small>{entity.count}</small></button>)}
   </div>
   <div className="facet-status">{catalog.error?<span role="alert">{catalog.error} <button type="button" onClick={catalog.retry}>重试</button></span>:catalog.loading?<span role="status">正在读取{requested?'完整':''}{label}目录…</span>:<span>{catalog.complete?`${matches.length} / ${catalog.total}`:`已显示 ${matches.length} / ${catalog.total??'…'}`} 个{label}{!catalog.complete&&' · 搜索或展开可读取全部'}</span>}{catalog.complete&&!matches.length&&<span role="status">没有匹配的{label}，试试其他名称。</span>}</div>
  </section>;
@@ -87,14 +88,14 @@ export function SortPicker({value,onChange}:{value:string;onChange:(value:string
  const name=SORT_FIELDS.find(([key])=>key===field)![1];
  const directionName=direction==='asc'?'升序':'降序';
  function choose(nextField:SortField,nextDirection:SortDirection){setSelection({field:nextField,direction:nextDirection});onChange(encodeSort(nextField,nextDirection))}
- return <div className="sort picker-sort"><span>排序</span><Menu.Root open={open} onOpenChange={setOpen} modal={false}>
+ return <div className="sort picker-sort"><span className="sort-label">排序</span><Menu.Root open={open} onOpenChange={setOpen} modal={false}>
   <Menu.Trigger asChild><button type="button" ref={triggerRef} className="picker-trigger sort-trigger" aria-label="排序" title={`${name} · ${directionName}`}><span className="picker-value">{name}</span><svg className="sort-direction" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={direction==='asc'?'M8 13V3m-4 4 4-4 4 4':'M8 3v10m-4-4 4 4 4-4'}/></svg><Chevron/></button></Menu.Trigger>
   <Menu.Portal><Menu.Content className="picker-layer picker-menu" data-picker-layer="menu" sideOffset={8} collisionPadding={12} avoidCollisions loop onCloseAutoFocus={event=>restoreTrigger(event,triggerRef)}>
    <Menu.Label className="picker-menu-label">排序字段</Menu.Label>
    <Menu.RadioGroup value={field} onValueChange={next=>choose(next as SortField,direction)} aria-label="排序字段">{SORT_FIELDS.map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key} onSelect={event=>event.preventDefault()}><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
    <Menu.Separator className="sort-separator"/>
    <Menu.Label className="picker-menu-label">排序方向</Menu.Label>
-   <Menu.RadioGroup value={direction} onValueChange={next=>{choose(field,next as SortDirection);setOpen(false)}} aria-label="排序方向">{([['asc','升序'],['desc','降序']] as const).map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key}><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
+   <Menu.RadioGroup value={direction} onValueChange={next=>{choose(field,next as SortDirection);setOpen(false)}} aria-label="排序方向">{([['asc','升序'],['desc','降序']] as const).map(([key,text])=><Menu.RadioItem className="picker-option" key={key} value={key}><svg className="picker-option-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={key==='asc'?'M8 13V3m-4 4 4-4 4 4':'M8 3v10m-4-4 4 4 4-4'}/></svg><span className="picker-option-name">{text}</span><span className="picker-check-slot"><Menu.ItemIndicator><Check/></Menu.ItemIndicator></span></Menu.RadioItem>)}</Menu.RadioGroup>
   </Menu.Content></Menu.Portal>
  </Menu.Root></div>;
 }

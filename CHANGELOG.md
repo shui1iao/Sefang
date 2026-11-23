@@ -1,5 +1,22 @@
 # Changelog
 
+## 3.3.0 — 2026-11-23
+
+### Redesigned dark UI
+- Redesign the entire web frontend with a unified cool-obsidian palette (`#0f1115` base, `#08090c` media matte, coral `#ff6b79` identity/selection accent), refined typography, consistent control geometry, and accessible focus rings across desktop and mobile breakpoints.
+- Upgrade the primary navigation bar into a segmented control with a smooth sliding indicator (`ResizeObserver`-synced across viewport changes); refine the search bar with focus highlight, clear button and ready-state submit arrow; unify history, username-linked account management and sign-out controls.
+- Keep the home actor rail inside a consistent rounded card across both desktop and mobile widths with smooth horizontal scrolling (removing the redundant expand-all-avatars toggle while keeping the full actors directory link).
+- Refine video cards (16:10 `contain` covers, refined no-cover placeholder, coral code highlighting), directory grids (whole-row adaptive pagination preserved), entity detail facet strips and sort menus, watch page metadata specification layout and segment selector, player chrome (buffering/restore spinners, filled volume slider, solid play/pause and exit-fullscreen icons), horizontal playback history cards with progress bars, login and account management forms.
+
+### Playback priority, recovery and health readiness
+- Prioritize active media playback over background cover/avatar fetches via `MediaGate`, and serve cached media slices directly without blocking behind the Telegram fetch gate.
+- Improve Telegram connection recovery with explicit session-rejection classification (`TgSessionRejected`), broadened FloodWait handling, exponential reconnect backoff (`60s / 120s / 240s / 300s`), and `/healthz?ready=1` business-readiness reporting.
+- Serialize playback lease open/close transitions (`playbackLease`), keep explicit in-segment retry/recovery on the single native `<video>` element without losing position, and add exponential retry/coalescing for transient playback-history progress write failures while preserving permanent 409 delete barriers.
+- Temporary diagnostics remain excluded from the public repository and compiled assets; clean shared core `2026.10.31.1` and all dependency versions remain unchanged.
+
+### Known issue — not confirmed fixed
+- The previously reported iPhone issue (audio/clock advancing while video picture remains frozen on playback or seek) remains unresolved and unverified on physical iOS/Safari devices. No physical iPhone/iOS repair is claimed.
+
 ## 3.2.0 — 2026-11-16
 
 - Switch to pure Docker Compose deployment (`Dockerfile`, `docker-compose.yml`, `.dockerignore` and GHCR workflow `ghcr.io/shui1iao/sefang`); remove host systemd unit files.

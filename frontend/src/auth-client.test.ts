@@ -29,6 +29,19 @@ describe("authenticated request policy", () => {
     expect(await sessionCheck()).toBe(null); expect(window.location.replace).toHaveBeenCalled();
     await expect(writeJson("/api/playbacks", {})).rejects.toThrow("请先登录");
   });
+  it("does not redirect a replacement session on a late 401 from a previous write", async () => {
+    const first = { id: 1, username: "fixture", role: "user" as const, csrf: "test-csrf", rate_bps: null, max_playbacks: 1 };
+    const next = { ...first, csrf: "replacement" };
+    setSession(first);
+    let finish!: (value: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(done => { finish = done; })));
+    const request = writeJson("/api/history/context", {});
+    setSession(next);
+    finish(new Response(JSON.stringify({ detail: "请先登录" }), { status: 401 }));
+    await expect(request).rejects.toMatchObject({ status: 401 });
+    expect(currentSession()).toBe(next);
+    expect(window.location.replace).not.toHaveBeenCalled();
+  });
   it("login errors stay on the login form", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ detail: "账号或密码不正确" }) }));
     await expect(writeJson("/api/auth/login", { username: "fixture", password: "test-only" })).rejects.toThrow("账号或密码不正确");

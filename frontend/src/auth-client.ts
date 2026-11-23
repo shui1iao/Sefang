@@ -21,10 +21,14 @@ export async function sessionCheck(): Promise<Session | null> {
   session = await response.json() as Session;
   return session;
 }
+export class HttpWriteError extends Error {
+  constructor(readonly status: number, message: string) { super(message); }
+}
 export async function writeJson<T = { ok: boolean }>(path: string, body: unknown, method: "POST" | "PATCH" = "POST"): Promise<T> {
-  const response = await fetch(path, { method, cache: "no-store", headers: { "Content-Type": "application/json", ...(session ? { "X-CSRF-Token": session.csrf } : {}) }, body: JSON.stringify(body) });
-  if (response.status === 401 && path !== "/api/auth/login") requireLogin();
+  const owner = session;
+  const response = await fetch(path, { method, cache: "no-store", headers: { "Content-Type": "application/json", ...(owner ? { "X-CSRF-Token": owner.csrf } : {}) }, body: JSON.stringify(body) });
+  if (response.status === 401 && path !== "/api/auth/login" && session?.id === owner?.id && session?.csrf === owner?.csrf) requireLogin();
   const data = await response.json();
-  if (!response.ok) throw Error(typeof data.detail === "string" ? data.detail : "请求未完成，请重试");
+  if (!response.ok) throw new HttpWriteError(response.status, typeof data.detail === "string" ? data.detail : "请求未完成，请重试");
   return data as T;
 }

@@ -32,13 +32,20 @@ class TgProblem(Exception):
         self.gone = gone
 
 
+class TgSessionRejected(TgProblem):
+    """Telegram explicitly refused the saved session, not a failed health check."""
+
+    def __init__(self):
+        super().__init__("Telegram 会话已失效")
+
+
 EXPIRED_REFERENCE = (errors.FileReferenceExpiredError, errors.FilerefUpgradeNeededError)
 
 
 def explain(error: BaseException) -> TgProblem:
     if isinstance(error, TgProblem):
         return error
-    if isinstance(error, errors.FloodWaitError):
+    if isinstance(error, (errors.FloodWaitError, errors.FloodPremiumWaitError, errors.FloodTestPhoneWaitError)):
         return TgProblem(f"Telegram 限流中，约 {error.seconds} 秒后可重试", wait=int(error.seconds))
     if isinstance(error, (errors.ChannelPrivateError, errors.ChannelInvalidError, errors.ChatAdminRequiredError)):
         return TgProblem("频道不可访问或已失效", gone=True)
@@ -76,26 +83,32 @@ class TgLink:
         self._edge: dict[int, object] = {}
 
     async def connect(self) -> bool:
-        if self.client is not None and self.client.is_connected():
-            return bool(await _bounded(self.client.is_user_authorized()))
         api_id, api_hash = self.account.get("api_id"), self.account.get("api_hash")
         saved = self.account.get("session") or ""
         if not api_id or not api_hash or not saved:
             return False
-        if self.client is not None:
-            await self.client.disconnect()
-        client = TelegramClient(StringSession(saved), int(api_id), str(api_hash), request_retries=1,
-                                connection_retries=3, retry_delay=1, flood_sleep_threshold=0,
-                                auto_reconnect=True, receive_updates=True)
-        client.add_event_handler(self._changed, events.NewMessage())
-        client.add_event_handler(self._changed, events.MessageEdited())
-        client.add_event_handler(self._removed, events.MessageDeleted())
-        self.client = client
-        await _bounded(client.connect())
-        ok = bool(await _bounded(client.is_user_authorized()))
-        if ok:
-            await _bounded(client.get_me())
-        return ok
+        client = self.client
+        try:
+            if client is None or not client.is_connected():
+                if client is not None:
+                    await client.disconnect()
+                client = TelegramClient(StringSession(saved), int(api_id), str(api_hash), request_retries=1,
+                                        connection_retries=3, retry_delay=1, flood_sleep_threshold=0,
+                                        raise_last_call_error=True, auto_reconnect=True, receive_updates=True)
+                client.add_event_handler(self._changed, events.NewMessage())
+                client.add_event_handler(self._changed, events.MessageEdited())
+                client.add_event_handler(self._removed, events.MessageDeleted())
+                self.client = client
+                await asyncio.wait_for(client.connect(), CALL_TIMEOUT)
+            # is_user_authorized() caches False on *any* RPCError. get_me() also
+            # hides 401s, including during connect()'s update initialization.
+            # Probe with the public read-only RPC to preserve the actual outcome.
+            await asyncio.wait_for(client(functions.updates.GetStateRequest()), CALL_TIMEOUT)
+        except (errors.UnauthorizedError, errors.AuthKeyDuplicatedError):
+            raise TgSessionRejected() from None
+        except Exception as error:
+            raise explain(error) from None
+        return True
 
     async def close(self) -> None:
         if self.client is not None:

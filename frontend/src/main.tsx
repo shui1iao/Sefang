@@ -3,9 +3,10 @@ import type { Resume } from "./history-client";
 import { Accounts, AccountActions, Login } from "./Accounts";
 import { currentSession, sessionCheck } from "./auth-client";
 import {
-  Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -47,7 +48,7 @@ import {
   translationLabel,
 } from "./display";
 import { useData, useScroll } from "./hooks";
-import { Avatar, Icon, Loading, Message, Pages, VideoGrid } from "./components";
+import { Avatar, BRAND_ICON, BRAND_WORDMARK, CodeTitle, Icon, Loading, Message, MessageMark, Pages, VideoGrid } from "./components";
 import type { Entity, Page, Video } from "./types";
 import { loadDirectory, loadVideoList, type ListData, type DirectoryData } from "./loaders";
 import { useCategoryPagination } from "./category-pagination";
@@ -56,11 +57,80 @@ import "./player.css";
 
 const historyStart = history.state?.idx ?? 0;
 
+function activeNavIndex(pathname: string): number {
+  if (pathname === "/") return 0;
+  if (pathname === "/actors" || pathname.startsWith("/actors/")) return 1;
+  if (pathname === "/categories" || pathname.startsWith("/categories/")) return 2;
+  if (pathname === "/studios" || pathname.startsWith("/studios/")) return 3;
+  return -1;
+}
+
 function Header() {
   const navigation = useNavigation();
   const loc = useLocation(),
     navigate = useNavigate();
   const [q, setQ] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const prevVisibleRef = useRef(false);
+  const [thumb, setThumb] = useState({
+    left: 0,
+    width: 0,
+    visible: false,
+    animate: false,
+    ready: false,
+  });
+  const navPath =
+    navigation.state === "loading" && navigation.location
+      ? navigation.location.pathname
+      : loc.pathname;
+  const activeIdx = activeNavIndex(navPath);
+
+  const measureNav = useCallback(
+    (allowAnimate: boolean) => {
+      const target = activeIdx >= 0 ? linkRefs.current[activeIdx] : null;
+      if (!target) {
+        prevVisibleRef.current = false;
+        setThumb((prev) =>
+          prev.visible || !prev.ready
+            ? { ...prev, visible: false, animate: false, ready: true }
+            : prev,
+        );
+        return;
+      }
+      const left = target.offsetLeft;
+      const width = target.offsetWidth;
+      const shouldAnimate = allowAnimate && prevVisibleRef.current;
+      prevVisibleRef.current = true;
+      setThumb((prev) =>
+        prev.left === left &&
+        prev.width === width &&
+        prev.visible &&
+        prev.ready &&
+        prev.animate === shouldAnimate
+          ? prev
+          : { left, width, visible: true, animate: shouldAnimate, ready: true },
+      );
+    },
+    [activeIdx],
+  );
+
+  useLayoutEffect(() => {
+    measureNav(true);
+  }, [measureNav]);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measureNav(false));
+    ro.observe(nav);
+    for (const el of linkRefs.current) {
+      if (el) ro.observe(el);
+    }
+    return () => ro.disconnect();
+  }, [measureNav]);
+
   useEffect(
     () => setQ(new URLSearchParams(loc.search).get("q") || ""),
     [loc.search],
@@ -75,27 +145,74 @@ function Header() {
         <Link className="brand" to="/" aria-label="Sefang 首页">
           <img
             className="brand-icon"
-            src="/assets/sefang-icon-836f1222d7b86f34.svg"
-            width={29}
-            height={29}
+            src={BRAND_ICON}
+            width={30}
+            height={30}
             alt=""
             aria-hidden="true"
           />
           <img
             className="brand-wordmark"
-            src="/assets/sefang-wordmark-b563570aba759b24.svg"
-            width={80.12}
-            height={32}
+            src={BRAND_WORDMARK}
+            width={75}
+            height={30}
             alt="Sefang"
           />
         </Link>
-        <nav aria-label="主要导航" aria-busy={navigation.state !== "idle"}>
-          <NavLink to="/" end>
+        <nav
+          ref={navRef}
+          className="main-nav"
+          aria-label="主要导航"
+          aria-busy={navigation.state !== "idle"}
+          data-slider={thumb.ready ? "on" : undefined}
+        >
+          <span
+            className="main-nav-thumb"
+            aria-hidden="true"
+            data-visible={thumb.visible ? "true" : undefined}
+            data-animate={thumb.animate ? "true" : undefined}
+            style={{
+              width: `${thumb.width}px`,
+              transform: `translate3d(${thumb.left}px, 0, 0)`,
+            }}
+          />
+          <NavLink
+            ref={(el) => {
+              linkRefs.current[0] = el;
+            }}
+            data-current={activeIdx === 0 ? "true" : undefined}
+            to="/"
+            end
+          >
             全部视频
           </NavLink>
-          <NavLink to="/actors">演员</NavLink>
-          <NavLink to="/categories">分类</NavLink>
-          <NavLink to="/studios">发行商</NavLink>
+          <NavLink
+            ref={(el) => {
+              linkRefs.current[1] = el;
+            }}
+            data-current={activeIdx === 1 ? "true" : undefined}
+            to="/actors"
+          >
+            演员
+          </NavLink>
+          <NavLink
+            ref={(el) => {
+              linkRefs.current[2] = el;
+            }}
+            data-current={activeIdx === 2 ? "true" : undefined}
+            to="/categories"
+          >
+            分类
+          </NavLink>
+          <NavLink
+            ref={(el) => {
+              linkRefs.current[3] = el;
+            }}
+            data-current={activeIdx === 3 ? "true" : undefined}
+            to="/studios"
+          >
+            发行商
+          </NavLink>
         </nav>
         <form
           className="search"
@@ -105,13 +222,30 @@ function Header() {
         >
           <Icon name="search" />
           <input
+            ref={input}
             aria-label="搜索番号、片名或演员"
             value={q}
             maxLength={300}
+            enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
             onChange={(e) => setQ(e.target.value)}
             placeholder="番号、片名、演员"
           />
-          <button type="submit" aria-label="搜索">
+          {q && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label="清空搜索"
+              onClick={() => {
+                setQ("");
+                input.current?.focus();
+              }}
+            >
+              <Icon name="close" />
+            </button>
+          )}
+          <button type="submit" className="search-submit" aria-label="搜索" data-ready={q.trim() ? "" : undefined}>
             <Icon name="arrow" />
           </button>
         </form>
@@ -119,6 +253,14 @@ function Header() {
       </div>
     </header>
   );
+}
+function ActorPlaceholders() {
+  return Array.from({ length: 14 }, (_, i) => (
+    <span key={i} className="actor-choice actor-placeholder" aria-hidden="true">
+      <span className="avatar skeleton" />
+      <span className="skeleton skeleton-line" />
+    </span>
+  ));
 }
 function ActorStrip({
   selected,
@@ -128,16 +270,18 @@ function ActorStrip({
   search: string;
 }) {
   const actors = useData<Page<Entity>>("/api/entities/actors?limit=100");
-  const [expanded, setExpanded] = useState(false);
   return (
     <section className="actor-section" aria-label="按演员筛选">
       <div className="section-label">
         <span>选择演员</span>
-        <Link to="/actors">
-          全部演员 <span aria-hidden="true">↗</span>
-        </Link>
+        <div className="section-tools">
+          <Link className="section-link" to="/actors">
+            全部演员
+            <Icon name="chevron" />
+          </Link>
+        </div>
       </div>
-      <div className={"actor-strip" + (expanded ? " expanded" : "")}>
+      <div className="actor-strip">
         <Link
           className={"actor-choice" + (!selected ? " selected" : "")}
           to={listLink({ actor: "" }, search)}
@@ -161,18 +305,16 @@ function ActorStrip({
             <span>{displayName(actor)}</span>
           </Link>
         ))}
-        {actors.loading && <span className="muted">正在读取演员</span>}
+        {actors.loading && (
+          <>
+            <span className="sr-only" role="status">正在读取演员</span>
+            <ActorPlaceholders />
+          </>
+        )}
       </div>
       {actors.error ? (
-        <p className="muted">演员暂未取得，仍可浏览全部视频</p>
+        <p className="muted section-note">演员暂未取得，仍可浏览全部视频</p>
       ) : null}
-      <button
-        className="quiet expand"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        {expanded ? "收起头像" : "展开全部头像"}
-      </button>
     </section>
   );
 }
@@ -222,7 +364,7 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
           {kind === "actors" && entity.data && (
             <Avatar entity={entity.data} large />
           )}
-          <div>
+          <div className="heading-text">
             <h1
               className={kind === "actors" ? "actor-name-title" : undefined}
               title={
@@ -233,7 +375,7 @@ function VideoList({ kind, entityId }: { kind?: Kind; entityId?: string }) {
             >
               {title}
             </h1>
-            <p className="muted">
+            <p className="muted heading-count">
               {data.data ? `${data.data.total} 个视频` : "正在读取视频"}
               {params.get("q") ? ` · “${params.get("q")}”` : ""}
             </p>
@@ -308,14 +450,15 @@ function Directory({ kind }: { kind: Kind }) {
   return (
     <main ref={root} className="container directory" data-directory={kind}>
       <div className="list-heading">
-        <div>
+        <div className="heading-text">
           <h1>{labels[kind]}目录</h1>
-          <p className="muted">
+          <p className="muted heading-count">
             {data.data?.total ?? "…"} 个{labels[kind]}
           </p>
         </div>
         <form
           className="directory-search"
+          role="search"
           onSubmit={(e) => {
             e.preventDefault();
             navigate(
@@ -325,11 +468,14 @@ function Directory({ kind }: { kind: Kind }) {
             );
           }}
         >
+          <Icon name="search" />
           <input
             aria-label={"搜索" + labels[kind]}
             placeholder={"搜索" + labels[kind]}
             value={text}
             maxLength={200}
+            enterKeyHint="search"
+            autoComplete="off"
             onChange={(e) => setText(e.target.value)}
           />
           <button>搜索</button>
@@ -357,15 +503,9 @@ function Directory({ kind }: { kind: Kind }) {
                 data-entity-id={e.id}
                 title={nameHint(e)}
               >
-                {kind === "actors" ? (
-                  <Avatar entity={e} large />
-                ) : (
-                  <span className="entity-symbol">
-                    <Icon name={kind === "studios" ? "studio" : "tag"} />
-                  </span>
-                )}
+                {kind === "actors" && <Avatar entity={e} large />}
                 <strong>{displayName(e)}</strong>
-                <span className="muted">{e.count} 个视频</span>
+                <span className="entity-count">{e.count} 个视频</span>
               </Link>
             ))}
           </div>
@@ -455,7 +595,7 @@ function Watch() {
       </nav>
       {!valid ? (
         <Message title="观看地址无效" />
-      ) : restoring || restoreRedirect ? <Loading /> : video && group ? (
+      ) : restoring || restoreRedirect ? <div className="player-skeleton skeleton" aria-label="正在恢复历史位置" /> : video && group ? (
         <div className="watch-layout">
           <div className="watch-main">
           {multi || video.available ? (
@@ -476,49 +616,44 @@ function Watch() {
           {verifiedRestore?.note && <p className="player-notice">{verifiedRestore.note}</p>}
           <section className="watch-info" data-watch-info="">
             <h1 data-display-title="">
-              {code && title.startsWith(code) ? (
-                <>
-                  <span className="watch-code">{code}</span>
-                  {title.slice(code.length)}
-                </>
-              ) : (
-                title
-              )}
+              <CodeTitle title={title} code={code} />
             </h1>
             {!["machine", "dictionary"].includes(
               video.title_translation?.method || "",
             ) && titleTranslationLabel && (
-              <p className="muted" data-translation-label="">
+              <p className="translation-label" data-translation-label="">
                 {titleTranslationLabel}
               </p>
             )}
             <details className="original" data-original-title="">
-              <summary>查看原片名</summary>
+              <summary>
+                <Icon name="chevron" />
+                查看原片名
+              </summary>
               <p>{video.title}</p>
             </details>
             <dl className="metadata">
               {KINDS.map((kind) => (
-                <div key={kind}>
+                <div key={kind} className="meta-row">
                   <dt>{labels[kind]}</dt>
                   <dd>
-                    {video.entities[kind].length
-                      ? video.entities[kind].map((e, i) => (
-                          <Fragment key={e.id}>
-                            {i ? " · " : ""}
-                            <Link to={`/${kind}/${e.id}`} title={nameHint(e)}>
-                              {displayName(e)}
-                            </Link>
-                          </Fragment>
-                        ))
-                      : "未取得"}
+                    {video.entities[kind].length ? (
+                      video.entities[kind].map((e) => (
+                        <Link key={e.id} className="meta-chip" to={`/${kind}/${e.id}`} title={nameHint(e)}>
+                          {displayName(e)}
+                        </Link>
+                      ))
+                    ) : (
+                      <span className="meta-empty">未取得</span>
+                    )}
                   </dd>
                 </div>
               ))}
-              <div>
+              <div className="meta-row meta-date">
                 <dt>发行日期</dt>
-                <dd>{video.release_date || "未取得"}</dd>
+                <dd>{video.release_date || <span className="meta-empty">未取得</span>}</dd>
               </div>
-              <div>
+              <div className="meta-row meta-date">
                 <dt>上传日期</dt>
                 <dd>{video.uploaded_at.slice(0, 10)}</dd>
               </div>
@@ -534,8 +669,9 @@ function Watch() {
                   referrerPolicy="no-referrer"
                 >
                   {multi
-                    ? `第${index + 1}段原 Telegram 消息 ↗`
-                    : "原 Telegram 消息 ↗"}
+                    ? `第${index + 1}段原 Telegram 消息`
+                    : "原 Telegram 消息"}
+                  <Icon name="external" />
                 </a>
               )}
               {video.sources?.map((s, i) =>
@@ -547,10 +683,11 @@ function Watch() {
                     rel="noopener noreferrer"
                     referrerPolicy="no-referrer"
                   >
-                    {s.name} ↗
+                    {s.name}
+                    <Icon name="external" />
                   </a>
                 ) : (
-                  <span key={i}>{s.name}</span>
+                  <span key={i} className="source-plain">{s.name}</span>
                 ),
               )}
             </div>
@@ -561,7 +698,7 @@ function Watch() {
               <h2>相关推荐</h2>
             </div>
             {related.loading ? (
-              <Loading />
+              <Loading count={4} />
             ) : related.error ? (
               <Message title="相关推荐未取得" />
             ) : (
@@ -583,26 +720,47 @@ function Watch() {
 function InitialPage() {
   const loc = useLocation();
   const directory = KINDS.some((kind) => loc.pathname === "/" + kind);
+  const home = loc.pathname === "/" && !normalizeQuery(loc.search).get("q");
   return (
     <main
       className={"container" + (directory ? " directory" : "")}
       aria-busy="true"
     >
-      <Loading />
+      {home && (
+        <section className="actor-section" aria-hidden="true">
+          <div className="section-label">
+            <span className="skeleton skeleton-label" />
+          </div>
+          <div className="actor-strip">
+            <ActorPlaceholders />
+          </div>
+        </section>
+      )}
+      <div className="list-heading" aria-hidden="true">
+        <div className="heading-text">
+          <span className="skeleton skeleton-title" />
+          <span className="skeleton skeleton-line short" />
+        </div>
+      </div>
+      <Loading variant={directory ? "tiles" : "videos"} count={directory ? 24 : 12} />
     </main>
   );
 }
 function Layout() {
+  const navigation = useNavigation();
   useEffect(() => {
     const check = () => { sessionCheck().catch(() => {}); };
     const timer = window.setInterval(check, 5000);
     window.addEventListener("focus", check);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", check); };
   }, []);
+  // The current page stays put while a loader runs; it only dims if the wait is noticeable.
   return (
     <>
       <Header />
-      <Outlet />
+      <div className="page" data-pending={navigation.state === "loading" ? "" : undefined}>
+        <Outlet />
+      </div>
     </>
   );
 }
@@ -662,5 +820,5 @@ createRoot(document.getElementById("root")!).render(
 // No protected component is mounted before the server has validated the cookie.
 if (window.location.pathname === "/login") renderApp();
 else sessionCheck().then(person => { if (person) renderApp(); }).catch(() => {
-  createRoot(document.getElementById("root")!).render(<main className="login-shell"><section className="account-panel"><h1>登录状态未取得</h1><p className="muted">请检查连接后刷新重试。</p><button onClick={() => window.location.reload()}>重试</button></section></main>);
+  createRoot(document.getElementById("root")!).render(<main className="login-shell"><section className="account-panel login-panel boot-error"><MessageMark /><h1>登录状态未取得</h1><p className="muted">请检查连接后刷新重试。</p><button className="button-primary" onClick={() => window.location.reload()}>重试</button></section></main>);
 });

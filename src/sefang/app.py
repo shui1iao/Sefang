@@ -116,8 +116,12 @@ def create_app(config: Config, link_factory=TgLink):
                             headers={"Cache-Control": "private, no-store", "Vary": "Cookie", "Content-Security-Policy": CSP})
 
     @app.get("/healthz")
-    def health():
-        return {"ok": True}
+    async def health(ready: str = ""):
+        if ready != "1":
+            return {"ok": True}
+        # Explicit offline mode serves a snapshot and has no Telegram dependency.
+        ok = owner is None or owner.business_ready()
+        return JSONResponse({"ok": ok}, status_code=200 if ok else 503)
 
     @app.get("/api/videos")
     def videos(q: str = Query("", max_length=300), actor: str = Query("", max_length=24), studio: str = Query("", max_length=24),
