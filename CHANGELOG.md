@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.3.1 (2026-11-23)
+
+- **反代登录限流修复**：可信本地/内网反代场景下按 `X-Forwarded-For` 最右合法客户端 IP 分桶，避免全站登录共享 `127.0.0.1` 限流桶。
+- **iOS Safari 续播防冻帧兜底**：为 `restorePosition()` 补齐 4 秒安全超时解锁与 `playing` 事件放行，避免关键帧误差或手势解码限制导致恢复遮罩卡死。
+- **SQLite 并发优化**：对目录/账号/历史库写连接统一启用 `PRAGMA journal_mode=WAL` 与 `busy_timeout=5000`。
+
 ## 3.3.0 — 2026-11-23
 
 ### Redesigned dark UI

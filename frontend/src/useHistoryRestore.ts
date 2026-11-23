@@ -18,9 +18,9 @@ export function recoveryPoint(unfinished:RecoveryPoint|undefined,historyPosition
 
 /** Only respond to the expected handle and part on the existing native element. */
 export function restorePosition(el:HTMLMediaElement,src:string,position:number,publish:(phase:'ready'|'failed')=>void){
- let alive=true,target:number|null=null,finished=false;
- const finish=(phase:'ready'|'failed')=>{finished=true;publish(phase)};
- const check=()=>{
+ let alive=true,target:number|null=null,finished=false,seekIssued=false;
+ const finish=(phase:'ready'|'failed')=>{if(finished)return;finished=true;publish(phase)};
+ const check=(ev?:Event)=>{
   if(!alive||finished||!matchesPlaybackSource(el,src))return;
   if(el.error){finish('failed');return}
   if(el.readyState<1)return;
@@ -28,12 +28,17 @@ export function restorePosition(el:HTMLMediaElement,src:string,position:number,p
    target=resumeTime(position,el.duration);
    if(target===null){finish('failed');return}
    el.pause();
-   try{if(el.currentTime!==target)el.currentTime=target}catch{finish('failed');return}
+   try{if(el.currentTime!==target){el.currentTime=target;seekIssued=true}}catch{finish('failed');return}
   }
   // loadedmetadata alone says nothing about the distant target being decoded.
-  if(atRestoreTarget(el,target)){el.pause();finish('ready')}
+  if(atRestoreTarget(el,target)){el.pause();finish('ready');return}
+  // Event-driven iOS Safari keyframe alignment guard: once seeked actually fires with
+  // a decoded frame near the target (keyframe GOP <= 5s) or user-initiated playing starts,
+  // release the restore mask without any clock-driven polling.
+  if(ev?.type==='seeked'&&seekIssued&&!el.seeking&&el.readyState>=2&&Math.abs(el.currentTime-target)<=5){el.pause();finish('ready');return}
+  if(ev?.type==='playing'&&!el.error&&el.readyState>=2){finish('ready')}
  };
- const events=['loadedmetadata','durationchange','loadeddata','canplay','seeked','progress','error'] as const;
+ const events=['loadedmetadata','durationchange','loadeddata','canplay','canplaythrough','seeked','playing','progress','error'] as const;
  events.forEach(event=>el.addEventListener(event,check));check();
  return()=>{alive=false;events.forEach(event=>el.removeEventListener(event,check))};
 }

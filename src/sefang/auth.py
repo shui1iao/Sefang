@@ -5,6 +5,7 @@ import asyncio
 from contextlib import contextmanager
 from dataclasses import dataclass
 import hashlib
+import ipaddress
 import hmac
 import os
 from pathlib import Path
@@ -94,8 +95,11 @@ class AuthStore:
 
     @contextmanager
     def db(self):
-        db = sqlite3.connect(self.path, timeout=5)
+        db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA synchronous=NORMAL")
+        db.execute("PRAGMA busy_timeout=5000")
         db.execute("PRAGMA foreign_keys=ON")
         try:
             with db:
@@ -228,11 +232,34 @@ def admin(request: Request):
     return person
 
 
+def _trusted_client_address(request: Request) -> str:
+    peer = request.client.host if request.client else "unknown"
+    try:
+        ip_obj = ipaddress.ip_address(peer)
+        trusted_proxy = ip_obj.is_loopback or ip_obj.is_private
+    except ValueError:
+        trusted_proxy = False
+    if trusted_proxy:
+        xff = request.headers.get("x-forwarded-for", "")
+        for cand in reversed([p.strip() for p in xff.split(",") if p.strip()]):
+            try:
+                return str(ipaddress.ip_address(cand))
+            except ValueError:
+                continue
+        real_ip = request.headers.get("x-real-ip", "").strip()
+        if real_ip:
+            try:
+                return str(ipaddress.ip_address(real_ip))
+            except ValueError:
+                pass
+    return peer
+
+
 @router.post("/api/auth/login")
 async def login(data: Login, request: Request):
     async with request.app.state.password_gate:
         token = await asyncio.to_thread(request.app.state.auth.login, data.username, data.password,
-                                        request.client.host if request.client else "unknown")
+                                        _trusted_client_address(request))
     person = request.app.state.auth.authenticate(token)
     if person is None:
         raise HTTPException(401, "账号或密码不正确")

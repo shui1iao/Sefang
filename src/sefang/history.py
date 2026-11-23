@@ -50,8 +50,11 @@ class HistoryStore:
 
     @contextmanager
     def db(self):
-        db = sqlite3.connect(self.path, timeout=5)
+        db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA synchronous=NORMAL")
+        db.execute("PRAGMA busy_timeout=5000")
         try:
             with db:
                 yield db
